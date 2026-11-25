@@ -1,0 +1,9 @@
+[out:json][timeout:120];
+(
+ way["highway"~"^(motorway|trunk|primary|secondary|tertiary|trunk_link|primary_link|unclassified|residential)$"](12.315,-1.575,12.415,-1.465);
+ way["natural"="water"](12.30,-1.60,12.43,-1.44);
+ way["leisure"="park"](12.30,-1.60,12.43,-1.44);
+ way["landuse"="forest"](12.30,-1.60,12.43,-1.44);
+ way["aeroway"="aerodrome"](12.30,-1.60,12.43,-1.44);
+);
+out geom tags;

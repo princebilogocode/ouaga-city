@@ -1,0 +1,8 @@
+[out:json][timeout:60];
+(
+ node["place"~"^(suburb|neighbourhood|quarter)$"](12.315,-1.575,12.415,-1.465);
+ nwr["amenity"~"^(marketplace|police|hospital|fuel)$"](12.315,-1.575,12.415,-1.465);
+ nwr["leisure"="stadium"](12.315,-1.575,12.415,-1.465);
+ nwr["railway"="station"](12.315,-1.575,12.415,-1.465);
+);
+out center tags;
