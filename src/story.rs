@@ -1,5 +1,6 @@
 //! Story mode: "L'histoire de Bila", six chapters in the real streets of Ouagadougou.
 
+use crate::empire::{fcfa, Empire, RICHEST};
 use crate::game::{Driver, Game, Ped, VKind};
 use crate::map::Map;
 use eframe::egui::{self as egui};
@@ -12,6 +13,8 @@ pub enum Obj {
     Timed { to: Pos2, label: String, time: f32 },
     Chase { tag: u8, label: String },
     Escape,
+    Buy { biz: usize },
+    Worth { amount: i64 },
 }
 
 #[derive(Clone)]
@@ -42,6 +45,9 @@ pub struct Story {
     pub banner: Option<(String, f32)>,
     pub finished: bool,
     pub retrying: bool,
+    pub buy_target: Option<Pos2>,
+    pub buy_text: String,
+    pub worth: i64,
 }
 
 pub fn speaker_colors(name: &str) -> (Color32, Color32) {
@@ -52,6 +58,8 @@ pub fn speaker_colors(name: &str) -> (Color32, Color32) {
         "Mme Kaboré" => (Color32::from_rgb(98, 62, 42), Color32::from_rgb(220, 150, 30)),
         "Policier" => (Color32::from_rgb(70, 45, 30), Color32::from_rgb(40, 60, 110)),
         "Le Commandant" => (Color32::from_rgb(60, 38, 26), Color32::from_rgb(30, 30, 30)),
+        "Awa" => (Color32::from_rgb(70, 45, 32), Color32::from_rgb(30, 110, 180)),
+        "Le Président" => (Color32::from_rgb(56, 36, 26), Color32::from_rgb(240, 240, 235)),
         _ => (Color32::from_rgb(85, 55, 36), Color32::from_rgb(130, 80, 160)),
     }
 }
@@ -67,6 +75,7 @@ pub fn build_steps(map: &Map) -> Vec<Step> {
     let barrage = map.road_point(pos2(-4700.0, -1350.0));
     let patte = map.road_point(pos2(509.0, 4140.0));
     let commissariat = place(map, "Commissariat de Police Central", pos2(36.0, -380.0));
+    let heros = map.road_point(map.landmarks.iter().find(|l| l.kind == "heros").map(|l| l.pos + egui::vec2(0.0, -60.0)).unwrap_or(pos2(1680.0, 5770.0)));
     let d = |a: Pos2, b: Pos2| (a - b).length();
     let l = |s: &'static str, t: &str| (s, t.to_string());
     vec![
@@ -154,6 +163,117 @@ pub fn build_steps(map: &Map) -> Vec<Step> {
             setup: Setup::None,
             obj: Obj::GoTo { to: commissariat, label: "Va au Commissariat de Police Central".into() },
         },
+        Step {
+            chapter: 7,
+            title: "Chapitre 7 — Le rêve ouagalais",
+            dialog: vec![
+                l("Mme Kaboré", "Tu as débarrassé Ouaga des Vautours. Maintenant, construis quelque chose. Ici, celui qui travaille peut tout devenir."),
+                l("Bila", "Mon rêve : partir d'un maquis et bâtir un empire. Le rêve ouagalais !"),
+                l("Mme Kaboré", "Fais des courses de taxi-moto depuis les marchés (cercles jaunes) et achète le maquis près du Grand Marché."),
+            ],
+            setup: Setup::None,
+            obj: Obj::Buy { biz: 0 },
+        },
+        Step {
+            chapter: 8,
+            title: "Chapitre 8 — La flotte de Bila",
+            dialog: vec![
+                l("Issouf", "Ton maquis tourne bien ! Avec une flotte de taxis-motos, tu fais travailler trente jeunes du quartier."),
+                l("Bila", "On commence en bas, on monte ensemble."),
+            ],
+            setup: Setup::None,
+            obj: Obj::Buy { biz: 1 },
+        },
+        Step {
+            chapter: 9,
+            title: "Chapitre 9 — Les grandes lignes",
+            dialog: vec![
+                l("Awa", "Je suis Awa, ingénieure en logistique. Ouaga est un carrefour : Bobo, Accra, Niamey, Lomé… Achetons une compagnie de cars."),
+                l("Awa", "Retrouve-moi au marché de Zogona."),
+            ],
+            setup: Setup::None,
+            obj: Obj::Buy { biz: 2 },
+        },
+        Step {
+            chapter: 10,
+            title: "Chapitre 10 — Ouaga 2000",
+            dialog: vec![
+                l("Awa", "Une délégation d'investisseurs atterrit. Conduis-les jusqu'au Monument aux Héros nationaux, vite et en douceur !"),
+            ],
+            setup: Setup::None,
+            obj: Obj::Timed { to: heros, label: "Conduis les investisseurs au Monument aux Héros nationaux".into(), time: d(commissariat, heros) / 9.0 + 90.0 },
+        },
+        Step {
+            chapter: 10,
+            title: "Chapitre 10 — Ouaga 2000",
+            dialog: vec![l("Awa", "Ils sont conquis. Achète l'hôtel face au monument : Ouaga 2000 sera notre vitrine.")],
+            setup: Setup::None,
+            obj: Obj::Buy { biz: 3 },
+        },
+        Step {
+            chapter: 11,
+            title: "Chapitre 11 — Made in Burkina",
+            dialog: vec![
+                l("Issouf", "Des saboteurs veulent bloquer l'usine de Faso Dan Fani ! Leur pick-up file dans le quartier."),
+                l("Bila", "Personne ne touche au pagne du Faso."),
+            ],
+            setup: Setup::Gang(Color32::from_rgb(60, 60, 64)),
+            obj: Obj::Chase { tag: 2, label: "Arrête le pick-up des saboteurs".into() },
+        },
+        Step {
+            chapter: 11,
+            title: "Chapitre 11 — Made in Burkina",
+            dialog: vec![l("Awa", "Le Faso Dan Fani s'exporte jusqu'à Paris et New York. Achète l'usine.")],
+            setup: Setup::None,
+            obj: Obj::Buy { biz: 4 },
+        },
+        Step {
+            chapter: 11,
+            title: "Chapitre 11 — Made in Burkina",
+            dialog: vec![l("Awa", "Karité, coton bio, sésame : transformons-les ici, au Burkina, au lieu d'exporter la matière brute.")],
+            setup: Setup::None,
+            obj: Obj::Buy { biz: 5 },
+        },
+        Step {
+            chapter: 12,
+            title: "Chapitre 12 — L'homme le plus riche d'Afrique",
+            dialog: vec![
+                l("Awa", "Faso Connect, la Banque Panafricaine, Sahel Énergie… Avec ça, tu deviens le premier investisseur du continent."),
+                l("Bila", "Et chaque franc gagné ici reste ici : écoles, hôpitaux, emplois."),
+            ],
+            setup: Setup::None,
+            obj: Obj::Buy { biz: 6 },
+        },
+        Step {
+            chapter: 12,
+            title: "Chapitre 12 — L'homme le plus riche d'Afrique",
+            dialog: vec![l("Awa", "La banque, maintenant. Des crédits pour toutes les Awa et tous les Bila d'Afrique.")],
+            setup: Setup::None,
+            obj: Obj::Buy { biz: 7 },
+        },
+        Step {
+            chapter: 12,
+            title: "Chapitre 12 — L'homme le plus riche d'Afrique",
+            dialog: vec![l("Awa", "Dernière pièce : le soleil du Sahel. Sahel Énergie, à Patte d'Oie.")],
+            setup: Setup::None,
+            obj: Obj::Buy { biz: 8 },
+        },
+        Step {
+            chapter: 12,
+            title: "Chapitre 12 — L'homme le plus riche d'Afrique",
+            dialog: vec![l("Issouf", "Encore un effort, frère : quand ta fortune dépassera 12 000 milliards, tu seras le plus riche d'Afrique !")],
+            setup: Setup::None,
+            obj: Obj::Worth { amount: RICHEST },
+        },
+        Step {
+            chapter: 12,
+            title: "Chapitre 12 — L'homme le plus riche d'Afrique",
+            dialog: vec![
+                l("Le Président", "Monsieur Bila, la Nation vous attend au Monument aux Héros nationaux pour vous honorer."),
+            ],
+            setup: Setup::None,
+            obj: Obj::GoTo { to: heros, label: "Rejoins la cérémonie au Monument aux Héros nationaux".into() },
+        },
     ]
 }
 
@@ -191,6 +311,9 @@ impl Story {
             banner: None,
             finished: false,
             retrying: false,
+            buy_target: None,
+            buy_text: String::new(),
+            worth: 0,
         };
         g.story = true;
         if start > 0 {
@@ -273,7 +396,8 @@ impl Story {
             Obj::Enter { tag, .. } => g.tagged(*tag).map(|i| g.vehicles[i].pos),
             Obj::GoTo { to, .. } | Obj::Timed { to, .. } => Some(*to),
             Obj::Chase { tag, .. } => g.tagged(*tag).map(|i| g.vehicles[i].pos),
-            Obj::Escape => None,
+            Obj::Escape | Obj::Worth { .. } => None,
+            Obj::Buy { .. } => self.buy_target,
         }
     }
 
@@ -289,10 +413,13 @@ impl Story {
                 format!("{label} · {:.0} m · prise {:.0}%", d, (self.catch / 3.0 * 100.0).min(100.0))
             }
             Obj::Escape => format!("Sème la police ({} étoile(s))", g.player.wanted),
+            Obj::Buy { .. } => self.buy_text.clone(),
+            Obj::Worth { amount } => format!("Fortune : {} / {}", fcfa(self.worth), fcfa(*amount)),
         }
     }
 
-    pub fn update(&mut self, map: &Map, g: &mut Game, dt: f32) {
+    pub fn update(&mut self, map: &Map, g: &mut Game, empire: &mut Empire, dt: f32) {
+        self.worth = empire.net_worth(g.player.money);
         if let Some(b) = &mut self.banner {
             b.1 -= dt;
             if b.1 <= 0.0 {
@@ -363,6 +490,24 @@ impl Story {
                     }
                 }
             },
+            Obj::Buy { biz } => {
+                let b = &empire.list[*biz];
+                self.buy_target = Some(b.place);
+                // courses at the markets are open while saving up
+                g.story = b.owned || g.player.money >= b.price;
+                self.buy_text = if b.owned {
+                    String::new()
+                } else if g.player.money >= b.price {
+                    format!("Va acheter {} ({}) · touche E sur place", b.name, fcfa(b.price))
+                } else {
+                    format!("Gagne {} (courses aux marchés, revenus) pour acheter {}", fcfa(b.price - g.player.money), b.name)
+                };
+                ok = b.owned;
+            }
+            Obj::Worth { amount } => {
+                g.story = false;
+                ok = self.worth >= *amount;
+            }
             Obj::Escape => {
                 if g.player.wanted == 0 {
                     ok = !g.ev_arrested;
@@ -380,13 +525,16 @@ impl Story {
             return;
         }
         if ok {
-            g.player.money += 1500 + 500 * st.chapter as i64;
+            g.story = true;
+            let reward = if st.chapter <= 6 { 1500 + 500 * st.chapter as i64 } else { 10_000 * 10i64.pow(st.chapter as u32 - 6) };
+            g.player.money += reward;
+            empire.save(g.player.money);
             self.step += 1;
             if self.step >= self.steps.len() {
                 self.finished = true;
                 g.story = false;
                 save_step(0);
-                self.banner = Some(("FIN — Bila est devenu une légende de Ouaga. Mode libre débloqué !".into(), 8.0));
+                self.banner = Some(("FIN — Bila, l'homme le plus riche d'Afrique. Le rêve ouagalais est réalisé !".into(), 10.0));
                 g.msg("Les marchés proposent maintenant des courses (cercles jaunes).");
             } else {
                 self.banner = Some(("Mission réussie !".into(), 2.5));

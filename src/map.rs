@@ -3,7 +3,7 @@
 //! around the city centre. Buildings and trees are generated along the streets.
 
 use eframe::egui::{self as egui};
-use egui::{pos2, vec2, Color32, Pos2, Vec2};
+use egui::{pos2, vec2, Pos2, Vec2};
 
 pub const MAP_DATA: &str = include_str!("../assets/ouaga.map");
 
@@ -87,32 +87,42 @@ impl Poi {
 }
 
 pub struct Building {
+    pub pts: Vec<Pos2>,
     pub c: Pos2,
-    pub h: Vec2,
-    pub cs: f32,
-    pub sn: f32,
-    pub color: Color32,
+    pub min: Pos2,
+    pub max: Pos2,
+    pub levels: u8,
+    /// m mosque, c church, h hotel, o office/shop, g public, s school, k health, u hut, r shed, x house, p generated
+    pub kind: char,
+    pub name: String,
     pub roof: u8,
-    pub floors: u8,
+    pub seed: u32,
 }
 impl Building {
-    pub fn corners(&self) -> [Pos2; 4] {
-        let ex = vec2(self.cs, self.sn) * self.h.x;
-        let ey = vec2(-self.sn, self.cs) * self.h.y;
-        [self.c - ex - ey, self.c + ex - ey, self.c + ex + ey, self.c - ex + ey]
+    pub fn height(&self) -> f32 {
+        match self.kind {
+            'u' => 2.4,
+            'r' => 2.8,
+            _ => self.levels as f32 * 3.2,
+        }
     }
-    pub fn to_local(&self, p: Pos2) -> Vec2 {
-        let d = p - self.c;
-        vec2(d.x * self.cs + d.y * self.sn, -d.x * self.sn + d.y * self.cs)
-    }
-    pub fn from_local(&self, v: Vec2) -> Vec2 {
-        vec2(v.x * self.cs - v.y * self.sn, v.x * self.sn + v.y * self.cs)
+    pub fn real(&self) -> bool {
+        self.kind != 'p'
     }
 }
 
 pub struct Tree {
     pub p: Pos2,
+    /// crown radius; 0 for a pure obstacle (monument base)
     pub r: f32,
+    pub trunk: f32,
+    pub baobab: bool,
+}
+
+pub struct Landmark {
+    pub kind: String,
+    pub name: String,
+    pub pos: Pos2,
 }
 
 pub struct Grid {
@@ -176,6 +186,7 @@ pub struct Map {
     pub roads: Vec<Road>,
     pub areas: Vec<Area>,
     pub pois: Vec<Poi>,
+    pub landmarks: Vec<Landmark>,
     pub buildings: Vec<Building>,
     pub trees: Vec<Tree>,
     pub segs: Vec<(u32, u32)>,
@@ -207,7 +218,7 @@ pub fn point_in_poly(p: Pos2, pts: &[Pos2]) -> bool {
     inside
 }
 
-fn triangulate(pts: &[Pos2]) -> Vec<[Pos2; 3]> {
+pub fn triangulate(pts: &[Pos2]) -> Vec<[Pos2; 3]> {
     let mut v: Vec<Pos2> = pts.to_vec();
     if v.len() > 1 && v[0] == v[v.len() - 1] {
         v.pop();
@@ -303,17 +314,36 @@ fn seg_hits_box(p0: Vec2, p1: Vec2, h: Vec2) -> bool {
     true
 }
 
-fn obb_overlap(a: &Building, b: &Building, gap: f32) -> bool {
-    let axes = [vec2(a.cs, a.sn), vec2(-a.sn, a.cs), vec2(b.cs, b.sn), vec2(-b.sn, b.cs)];
-    let d = b.c - a.c;
-    for ax in axes {
-        let ra = a.h.x * (ax.dot(vec2(a.cs, a.sn))).abs() + a.h.y * (ax.dot(vec2(-a.sn, a.cs))).abs();
-        let rb = b.h.x * (ax.dot(vec2(b.cs, b.sn))).abs() + b.h.y * (ax.dot(vec2(-b.sn, b.cs))).abs();
-        if d.dot(ax).abs() > ra + rb + gap {
-            return false;
-        }
+struct Obb {
+    c: Pos2,
+    h: Vec2,
+    cs: f32,
+    sn: f32,
+}
+impl Obb {
+    fn to_local(&self, p: Pos2) -> Vec2 {
+        let d = p - self.c;
+        vec2(d.x * self.cs + d.y * self.sn, -d.x * self.sn + d.y * self.cs)
     }
-    true
+    fn corners(&self) -> Vec<Pos2> {
+        let ex = vec2(self.cs, self.sn) * self.h.x;
+        let ey = vec2(-self.sn, self.cs) * self.h.y;
+        vec![self.c - ex - ey, self.c + ex - ey, self.c + ex + ey, self.c - ex + ey]
+    }
+}
+
+pub const BUILDINGS_DATA: &str = include_str!("../assets/buildings.map");
+
+fn poly_area(pts: &[Pos2]) -> f32 {
+    let n = pts.len();
+    (0..n)
+        .map(|i| {
+            let (a, b) = (pts[i], pts[(i + 1) % n]);
+            a.x * b.y - b.x * a.y
+        })
+        .sum::<f32>()
+        .abs()
+        * 0.5
 }
 
 impl Map {
@@ -321,7 +351,9 @@ impl Map {
         let mut roads = Vec::new();
         let mut areas = Vec::new();
         let mut pois = Vec::new();
-        for line in MAP_DATA.lines() {
+        let mut raw_buildings: Vec<(String, String, Vec<Pos2>)> = Vec::new();
+        let mut landmarks = Vec::new();
+        for line in MAP_DATA.lines().chain(BUILDINGS_DATA.lines()) {
             let mut parts = line.splitn(3, '|');
             let (Some(tag), Some(name), Some(coords)) = (parts.next(), parts.next(), parts.next()) else { continue };
             let pts: Vec<Pos2> = coords
@@ -345,22 +377,40 @@ impl Map {
                 if pts.len() < 3 {
                     continue;
                 }
-                let kind = match tag { "W" => 0, "G" => 1, _ => 2 };
+                let kind = match tag {
+                    "W" => 0,
+                    "G" => 1,
+                    _ => 2,
+                };
                 let (min, max) = bbox(&pts);
                 let tris = triangulate(&pts);
                 areas.push(Area { kind, name, pts, tris, min, max });
+            } else if let Some(b) = tag.strip_prefix('B') {
+                if pts.len() >= 3 {
+                    raw_buildings.push((b.to_string(), name, pts));
+                }
+            } else if let Some(k) = tag.strip_prefix('L') {
+                landmarks.push(Landmark { kind: k.to_string(), name, pos: pts[0] });
             } else {
                 pois.push(Poi { kind: tag.chars().next().unwrap_or('Q'), name, pos: pts[0] });
             }
         }
         // draw order: airport, green, water
-        areas.sort_by_key(|a| match a.kind { 2 => 0, 1 => 1, _ => 2 });
+        areas.sort_by_key(|a| match a.kind {
+            2 => 0,
+            1 => 1,
+            _ => 2,
+        });
 
         let mut min = pos2(f32::MAX, f32::MAX);
         let mut max = pos2(f32::MIN, f32::MIN);
         for r in &roads {
             min = min.min(r.min);
             max = max.max(r.max);
+        }
+        for l in &landmarks {
+            min = min.min(l.pos - vec2(200.0, 200.0));
+            max = max.max(l.pos + vec2(200.0, 200.0));
         }
         min -= vec2(100.0, 100.0);
         max += vec2(100.0, 100.0);
@@ -381,32 +431,109 @@ impl Map {
             roads,
             areas,
             pois,
+            landmarks,
             buildings: Vec::new(),
             trees: Vec::new(),
             segs,
             road_grid,
-            bld_grid: Grid::new(min, max, 50.0),
+            bld_grid: Grid::new(min, max, 40.0),
             tree_grid: Grid::new(min, max, 50.0),
             min,
             max,
         };
+        map.add_real_buildings(raw_buildings);
         map.generate_buildings();
         map
     }
 
+    fn push_building(&mut self, b: Building) {
+        let id = self.buildings.len() as u32;
+        self.bld_grid.insert_box(b.min, b.max, id);
+        self.buildings.push(b);
+    }
+
+    /// Real OpenStreetMap footprints. Missing heights are estimated from size and place.
+    fn add_real_buildings(&mut self, raw: Vec<(String, String, Vec<Pos2>)>) {
+        let centre = pos2(-381.0, -364.0);
+        for (i, (tag, name, pts)) in raw.into_iter().enumerate() {
+            let digits: String = tag.chars().take_while(|c| c.is_ascii_digit()).collect();
+            let kind = tag.chars().last().filter(|c| c.is_ascii_alphabetic()).unwrap_or('x');
+            let mut levels: u8 = digits.parse().unwrap_or(0);
+            let mut rng = Rng(0x9E37_79B9_7F4A_7C15 ^ (i as u64 + 1).wrapping_mul(0x2545F4914F6CDD1D));
+            rng.next();
+            let area = poly_area(&pts);
+            let (bmin, bmax) = bbox(&pts);
+            let c = bmin + (bmax - bmin) * 0.5;
+            if levels == 0 {
+                let near = (c - centre).length() < 2500.0;
+                levels = if area < 60.0 {
+                    1
+                } else if area < 250.0 {
+                    if rng.f() < 0.12 { 2 } else { 1 }
+                } else if area < 900.0 {
+                    1 + rng.below(if near { 4 } else { 2 }) as u8
+                } else {
+                    2 + rng.below(if near { 5 } else { 2 }) as u8
+                };
+                if matches!(kind, 'o' | 'g' | 'h') {
+                    levels += 1 + rng.below(2) as u8;
+                }
+                if matches!(kind, 'm' | 'c') {
+                    levels = 2;
+                }
+            }
+            let roof = if kind == 'u' {
+                3
+            } else {
+                let r = rng.f();
+                if levels >= 3 || matches!(kind, 'o' | 'g' | 'h' | 'k' | 's') {
+                    1
+                } else if r < 0.55 {
+                    0
+                } else if r < 0.9 {
+                    1
+                } else {
+                    2
+                }
+            };
+            self.push_building(Building { pts, c, min: bmin, max: bmax, levels: levels.max(1), kind, name, roof, seed: rng.next() as u32 });
+        }
+    }
+
+    fn real_buildings_near(&self, p: Pos2, r: f32) -> usize {
+        let mut n = 0;
+        self.bld_grid.query(p - vec2(r, r), p + vec2(r, r), |_| n += 1);
+        n
+    }
+
+    /// Height of the building standing at a point, if any.
+    pub fn building_height_at(&self, p: Pos2) -> Option<f32> {
+        let mut h: Option<f32> = None;
+        self.bld_grid.query(p, p, |id| {
+            let b = &self.buildings[id as usize];
+            if p.x >= b.min.x && p.x <= b.max.x && p.y >= b.min.y && p.y <= b.max.y && point_in_poly(p, &b.pts) {
+                h = Some(h.unwrap_or(0.0).max(b.height() + 0.8));
+            }
+        });
+        h
+    }
+
+    pub fn point_in_building(&self, p: Pos2) -> bool {
+        let mut inside = false;
+        self.bld_grid.query(p, p, |id| {
+            let b = &self.buildings[id as usize];
+            if !inside && p.x >= b.min.x && p.x <= b.max.x && p.y >= b.min.y && p.y <= b.max.y && point_in_poly(p, &b.pts) {
+                inside = true;
+            }
+        });
+        inside
+    }
+
+    /// Trees along every street, plus generated houses where the map has no footprints.
     fn generate_buildings(&mut self) {
         let mut rng = Rng(0x0A6A_D0D0_1234_5678);
-        let wall_colors = [
-            Color32::from_rgb(150, 150, 152), // tôle (tin roof)
-            Color32::from_rgb(170, 172, 176),
-            Color32::from_rgb(128, 132, 138),
-            Color32::from_rgb(196, 112, 70), // terracotta
-            Color32::from_rgb(226, 214, 190), // concrete terrace
-            Color32::from_rgb(214, 186, 140), // banco ochre
-            Color32::from_rgb(190, 140, 96),
-        ];
-        let mut buildings: Vec<Building> = Vec::new();
         let mut trees: Vec<Tree> = Vec::new();
+        let mut gen: Vec<Building> = Vec::new();
         for ri in 0..self.roads.len() {
             let kind = self.roads[ri].kind;
             let hw = self.roads[ri].half_width();
@@ -424,49 +551,62 @@ impl Map {
                     let mut s = rng.range(0.0, 5.0);
                     while s < len - 4.0 {
                         let big = kind <= 2;
-                        let w = if big { rng.range(10.0, 26.0) } else { rng.range(7.0, 15.0) };
-                        let d = if big { rng.range(10.0, 22.0) } else { rng.range(7.0, 13.0) };
-                        if rng.f() < 0.35 {
+                        let w = if big { rng.range(10.0, 24.0) } else { rng.range(7.0, 14.0) };
+                        let d = if big { rng.range(10.0, 20.0) } else { rng.range(7.0, 12.0) };
+                        if rng.f() < if kind <= 3 { 0.45 } else { 0.25 } {
                             let tp = a + dir * s + nrm * side * (hw + 1.6);
-                            if self.road_clear(tp, 0.8) && !self.in_area(tp, 0) {
-                                trees.push(Tree { p: tp, r: rng.range(2.5, 5.0) });
+                            if self.road_clear(tp, 0.8) && !self.in_area(tp, 0) && !self.point_in_building(tp) {
+                                let baobab = rng.f() < 0.06;
+                                trees.push(Tree {
+                                    p: tp,
+                                    r: if baobab { rng.range(4.5, 6.5) } else { rng.range(2.5, 5.0) },
+                                    trunk: if baobab { 1.1 } else { 0.4 },
+                                    baobab,
+                                });
                             }
-                        }
-                        if rng.f() < 0.12 {
-                            s += w;
-                            continue;
                         }
                         let setback = hw + 2.0 + rng.range(0.0, 3.0);
                         let c = a + dir * (s + w * 0.5) + nrm * side * (setback + d * 0.5);
-                        let bl = Building {
-                            c,
-                            h: vec2(w * 0.5, d * 0.5),
-                            cs: dir.x,
-                            sn: dir.y,
-                            color: wall_colors[rng.below(wall_colors.len())],
-                            roof: rng.below(3) as u8,
-                            floors: if big {
-                                if c.to_vec2().length() < 1800.0 { 2 + rng.below(6) as u8 } else { 1 + rng.below(3) as u8 }
-                            } else if rng.f() < 0.15 { 2 } else { 1 },
-                        };
-                        if self.building_ok(&bl, &buildings) {
-                            let id = buildings.len() as u32;
-                            self.bld_grid.insert(c, id);
-                            buildings.push(bl);
+                        if rng.f() > 0.12 && self.real_buildings_near(c, 45.0) == 0 {
+                            let ob = Obb { c, h: vec2(w * 0.5, d * 0.5), cs: dir.x, sn: dir.y };
+                            if self.generated_ok(&ob, &gen) {
+                                let levels = if big {
+                                    if c.to_vec2().length() < 1800.0 { 2 + rng.below(5) as u8 } else { 1 + rng.below(3) as u8 }
+                                } else if rng.f() < 0.15 {
+                                    2
+                                } else {
+                                    1
+                                };
+                                let pts = ob.corners();
+                                let (bmin, bmax) = bbox(&pts);
+                                gen.push(Building { pts, c, min: bmin, max: bmax, levels, kind: 'p', name: String::new(), roof: rng.below(3) as u8, seed: rng.next() as u32 });
+                            }
                         }
                         s += w + rng.range(1.0, 4.0);
                     }
                 }
             }
         }
-        for (i, t) in trees.iter().enumerate() {
-            self.tree_grid.insert(t.p, i as u32);
+        for b in gen {
+            self.push_building(b);
         }
-        self.buildings = buildings;
+        // monuments block the way like big trunks
+        for l in &self.landmarks {
+            let r = match l.kind.as_str() {
+                "heros" => 14.0,
+                "nations" | "cineastes" => 6.0,
+                "eau" => 5.0,
+                _ => 3.0,
+            };
+            trees.push(Tree { p: l.pos, r: 0.0, trunk: r, baobab: false });
+        }
+        for (i, t) in trees.iter().enumerate() {
+            self.tree_grid.insert_box(t.p - vec2(t.trunk, t.trunk), t.p + vec2(t.trunk, t.trunk), i as u32);
+        }
         self.trees = trees;
     }
 
-    fn building_ok(&self, bl: &Building, existing: &[Building]) -> bool {
+    fn generated_ok(&self, bl: &Obb, gen: &[Building]) -> bool {
         if !(self.min.x < bl.c.x && bl.c.x < self.max.x && self.min.y < bl.c.y && bl.c.y < self.max.y) {
             return false;
         }
@@ -495,12 +635,13 @@ impl Map {
         if !ok {
             return false;
         }
-        self.bld_grid.query(bl.c - vec2(r + 26.0, r + 26.0), bl.c + vec2(r + 26.0, r + 26.0), |id| {
-            if ok && obb_overlap(bl, &existing[id as usize], 1.0) {
-                ok = false;
+        let (bmin, bmax) = bbox(&bl.corners());
+        for g in gen.iter().rev().take(400) {
+            if bmin.x < g.max.x + 1.0 && bmax.x > g.min.x - 1.0 && bmin.y < g.max.y + 1.0 && bmax.y > g.min.y - 1.0 {
+                return false;
             }
-        });
-        ok
+        }
+        true
     }
 
     pub fn in_area(&self, p: Pos2, kind: u8) -> bool {
@@ -545,32 +686,44 @@ impl Map {
         best
     }
 
-    /// Push a circle out of buildings and tree trunks. Returns the push normal.
+    /// Push a circle out of buildings, tree trunks and monuments. Returns the push normal.
     pub fn collide(&self, p: &mut Pos2, r: f32) -> Option<Vec2> {
         let mut total = Vec2::ZERO;
-        let q = 30.0 + r;
-        self.bld_grid.query(*p - vec2(q, q), *p + vec2(q, q), |id| {
+        let mut seen: Vec<u32> = Vec::new();
+        self.bld_grid.query(*p - vec2(r, r), *p + vec2(r, r), |id| {
+            if seen.contains(&id) {
+                return;
+            }
+            seen.push(id);
             let b = &self.buildings[id as usize];
-            let l = b.to_local(*p);
-            let cl = vec2(l.x.clamp(-b.h.x, b.h.x), l.y.clamp(-b.h.y, b.h.y));
-            let d = l - cl;
-            let dl = d.length();
-            let push_local = if dl > 1e-4 {
-                if dl < r { d / dl * (r - dl) } else { return }
+            if p.x < b.min.x - r || p.x > b.max.x + r || p.y < b.min.y - r || p.y > b.max.y + r {
+                return;
+            }
+            let n = b.pts.len();
+            let mut best = (f32::MAX, *p);
+            for i in 0..n {
+                let (a, c) = (b.pts[i], b.pts[(i + 1) % n]);
+                let (d, t) = seg_dist(*p, a, c);
+                if d < best.0 {
+                    best = (d, a + (c - a) * t);
+                }
+            }
+            let (dl, q) = best;
+            let w = if point_in_poly(*p, &b.pts) {
+                let dir = if dl > 1e-4 { (q - *p) / dl } else { vec2(1.0, 0.0) };
+                dir * (dl + r)
+            } else if dl < r && dl > 1e-4 {
+                (*p - q) / dl * (r - dl)
             } else {
-                // centre inside the box: push out along the shallowest axis
-                let px = b.h.x - l.x.abs() + r;
-                let py = b.h.y - l.y.abs() + r;
-                if px < py { vec2(px * l.x.signum(), 0.0) } else { vec2(0.0, py * l.y.signum()) }
+                return;
             };
-            let w = b.from_local(push_local);
             *p += w;
             total += w;
         });
-        self.tree_grid.query(*p - vec2(6.0, 6.0), *p + vec2(6.0, 6.0), |id| {
+        self.tree_grid.query(*p - vec2(r, r), *p + vec2(r, r), |id| {
             let t = &self.trees[id as usize];
             let d = *p - t.p;
-            let rr = r + 0.5;
+            let rr = r + t.trunk;
             let dl = d.length();
             if dl < rr && dl > 1e-4 {
                 let w = d / dl * (rr - dl);
