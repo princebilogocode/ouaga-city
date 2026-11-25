@@ -90,6 +90,39 @@ impl Vehicle {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ActKind {
+    Eat,
+    Sleep,
+    Sit,
+    Tv,
+    Run,
+    Punch,
+    Squat,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Activity {
+    pub kind: ActKind,
+    pub t: f32,
+    pub dur: f32,
+}
+
+#[derive(Clone, Debug)]
+pub struct Talk {
+    pub ped: usize,
+    pub t: f32,
+    pub line: String,
+    pub reply: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct Door {
+    pub interior: usize,
+    pub pos: Pos2,
+    pub label: String,
+}
+
 pub struct Ped {
     pub pos: Pos2,
     pub angle: f32,
@@ -181,6 +214,19 @@ pub struct Game {
     pub fx: Vec<Fx>,
     pub enemy_cd: f32,
     pub shops: Vec<Pos2>,
+    pub doors: Vec<Door>,
+    pub inside: Option<usize>,
+    pub outside: (Pos2, f32),
+    pub activity: Option<Activity>,
+    pub talk: Option<Talk>,
+    pub punch_t: f32,
+    pub enter_t: f32,
+    pub entering: Option<usize>,
+    pub hunger: f32,
+    pub forme: f32,
+    pub force: f32,
+    pub garage_car: Option<(VKind, Color32)>,
+    pub ev_saved: bool,
 }
 
 const CAR_COLORS: [Color32; 8] = [
@@ -271,6 +317,19 @@ impl Game {
                 .filter_map(|n| map.poi_named(n))
                 .map(|p| map.road_point(p + vec2(25.0, 25.0)))
                 .collect(),
+            doors: crate::life::make_doors(map),
+            inside: None,
+            outside: (Pos2::ZERO, 0.0),
+            activity: None,
+            talk: None,
+            punch_t: 0.0,
+            enter_t: 0.0,
+            entering: None,
+            hunger: 80.0,
+            forme: 20.0,
+            force: 20.0,
+            garage_car: None,
+            ev_saved: false,
         };
         // the player starts on a moto, the city's favourite ride
         g.vehicles.push(Vehicle {
@@ -390,6 +449,7 @@ impl Game {
         let dir = vec2(yaw.cos(), yaw.sin());
         let origin = self.player.pos + dir * 0.4;
         if self.weapon == 0 {
+            self.punch_t = 0.5;
             // a punch: the closest person in front
             let hit = self.peds.iter().position(|p| p.down <= 0.0 && (p.pos - origin).length() < range && (p.pos - origin).normalized().dot(dir) > 0.5);
             if let Some(i) = hit {
@@ -675,6 +735,12 @@ impl Game {
             self.honk = 0.4;
         }
 
+        self.update_life(dt);
+        if self.inside.is_some() {
+            self.aiming = false;
+            self.update_player(map, inp, dt);
+            return;
+        }
         self.populate(map, false);
         if let Some(w) = inp.switch {
             if self.owned[w] {
@@ -709,6 +775,35 @@ impl Game {
     }
 
     fn update_player(&mut self, map: &Map, inp: Input, dt: f32) {
+        if self.activity.is_some() {
+            if inp.action {
+                self.activity = None;
+            }
+            self.player.moving = 0.0;
+            return;
+        }
+        if let Some(vi) = self.entering {
+            // walking to the door and sitting in
+            self.enter_t -= dt;
+            if vi < self.vehicles.len() {
+                let v = &self.vehicles[vi];
+                let door = v.pos + right_of(v.fwd()) * -(v.kind.spec().1 + 0.45);
+                let d = door - self.player.pos;
+                if d.length() > 0.05 {
+                    self.player.angle = d.y.atan2(d.x);
+                    self.player.pos += d.normalized() * d.length().min(3.0 * dt);
+                }
+                self.player.walk += 3.0 * dt;
+                self.player.moving = 0.8;
+            }
+            if self.enter_t <= 0.0 {
+                self.entering = None;
+                if vi < self.vehicles.len() && !self.vehicles[vi].remove {
+                    self.finish_enter(vi);
+                }
+            }
+            return;
+        }
         if inp.action {
             self.toggle_vehicle(map);
         }
@@ -744,13 +839,13 @@ impl Game {
             None => {
                 self.player.angle += (inp.right as i32 - inp.left as i32) as f32 * 2.6 * dt;
                 let mv = (inp.up as i32 - inp.down as i32) as f32;
-                let sp = if mv < 0.0 { 2.0 } else if inp.sprint { 7.0 } else { 3.2 };
+                let sp = if mv < 0.0 { 1.6 } else if inp.sprint { 6.2 * (0.85 + self.forme / 330.0) } else { 1.45 };
                 let d = vec2(self.player.angle.cos(), self.player.angle.sin()) * mv;
                 self.player.pos += d * sp * dt;
                 self.player.walk += mv.abs() * sp * dt;
-                let target = if mv != 0.0 { (sp / 4.0).min(1.3) } else { 0.0 };
+                let target = if mv != 0.0 { if inp.sprint && mv > 0.0 { 1.5 } else { 1.0 } } else { 0.0 };
                 self.player.moving += (target - self.player.moving) * (dt * 8.0).min(1.0);
-                map.collide(&mut self.player.pos, 0.4);
+                self.collide_player(map);
             }
         }
         if self.player.health <= 0.0 {
@@ -799,6 +894,14 @@ impl Game {
             .filter(|(_, d)| *d < 2.5)
             .min_by(|a, b| a.1.total_cmp(&b.1));
         if let Some((vi, _)) = best {
+            self.entering = Some(vi);
+            self.enter_t = if self.vehicles[vi].kind == VKind::Moto { 0.35 } else { 0.7 };
+            self.aiming = false;
+        }
+    }
+
+    fn finish_enter(&mut self, vi: usize) {
+        {
             let (drv, kind) = (self.vehicles[vi].driver, self.vehicles[vi].kind);
             match drv {
                 Driver::Traffic => {

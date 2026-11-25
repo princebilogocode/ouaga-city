@@ -7,7 +7,10 @@
 
 use crate::game::{Driver, Game, VKind};
 use crate::map::{triangulate, Map};
-use crate::models::{self, Inst, Models, M_BILA, M_JEUNE, M_MOTO, PEOPLE};
+use crate::game::ActKind;
+use crate::models::{self, Inst, Models, M_MOTO};
+use crate::skinned::{self, Anim, CInst, Skinned, C_BILA, C_JEUNE};
+use crate::statics;
 use crate::net::Remote;
 use eframe::egui::{self as egui};
 use eframe::egui_glow;
@@ -21,7 +24,7 @@ use std::sync::{Arc, Mutex};
 pub const FLOATS: usize = 13;
 const CHUNK: f32 = 400.0;
 const TEX: usize = 512;
-const LAYERS: usize = 16;
+const LAYERS: usize = 20;
 const SHADOW_SIZE: i32 = 2048;
 const SHADOW_HALF: f32 = 150.0;
 
@@ -314,6 +317,10 @@ fn build_textures() -> (Vec<u8>, Vec<u8>) {
         (10, photo!("pave")),
         (11, photo!("vitre")),
         (12, photo!("ecorce")),
+        (16, photo!("parquet")),
+        (17, photo!("carrelage")),
+        (18, photo!("tissu")),
+        (19, photo!("bois")),
     ];
     let mut color = vec![0u8; TEX * TEX * 4 * LAYERS];
     let mut normal = vec![0u8; TEX * TEX * 4 * LAYERS];
@@ -981,6 +988,9 @@ pub struct FrameData {
     pub opaque: Vec<f32>,
     pub translucent: Vec<f32>,
     pub insts: Vec<Inst>,
+    pub chars: Vec<CInst>,
+    pub cars: Vec<CarInst>,
+    pub interior: Option<usize>,
 }
 
 fn smooth(a: f32, b: f32, x: f32) -> f32 {
@@ -1030,39 +1040,105 @@ pub struct SceneInput<'a> {
     pub chase_tag: Option<u8>,
     pub bila_suit: bool,
     pub biz_markers: &'a [(Pos2, bool)],
+    pub steer: f32,
 }
 
 fn person_model(seed: u32) -> usize {
-    PEOPLE[(seed.wrapping_mul(2654435761) >> 13) as usize % PEOPLE.len()]
+    skinned::PEOPLE[(seed.wrapping_mul(2654435761) >> 13) as usize % skinned::PEOPLE.len()]
 }
 
 fn at(p: Pos2, ang: f32) -> Mat4 {
     Mat4::from_translation(v3(p, 0.0)) * Mat4::from_rotation_y(-ang)
 }
 
-pub fn build_scene(si: &SceneInput) -> (Vec<f32>, Vec<f32>, Vec<Inst>) {
+/// A Blender-modelled car to draw: body + 4 wheels.
+#[derive(Clone, Copy)]
+pub struct CarInst {
+    pub mesh: usize,
+    pub mat: Mat4,
+    pub paint: [f32; 3],
+    pub spin: f32,
+    pub steer: f32,
+}
+
+pub struct Scene {
+    pub opaque: Vec<f32>,
+    pub translucent: Vec<f32>,
+    pub insts: Vec<Inst>,
+    pub chars: Vec<CInst>,
+    pub cars: Vec<CarInst>,
+}
+
+fn car_mesh(k: VKind) -> usize {
+    match k {
+        VKind::Taxi => statics::V_TAXI,
+        VKind::Police => statics::V_POLICE,
+        VKind::Minibus => statics::V_MINIBUS,
+        _ => statics::V_SEDAN,
+    }
+}
+
+/// Bila's animation for the current state.
+pub fn bila_anim(g: &Game) -> (Anim, f32) {
+    if let Some(a) = &g.activity {
+        let anim = match a.kind {
+            ActKind::Eat => Anim::Eat,
+            ActKind::Sit | ActKind::Tv | ActKind::Sleep => Anim::Sit,
+            ActKind::Squat => Anim::Squat,
+            ActKind::Punch => Anim::Punch,
+            ActKind::Run => Anim::Run,
+        };
+        let t = if a.kind == ActKind::Punch { a.t % 0.5 } else { a.t };
+        return (anim, t);
+    }
+    if g.talk.is_some() {
+        return (Anim::Talk, g.time);
+    }
+    if g.punch_t > 0.0 {
+        return (Anim::Punch, 0.5 - g.punch_t);
+    }
+    if g.aiming && g.weapon > 0 {
+        return (Anim::Aim, g.time);
+    }
+    if g.player.moving > 1.2 {
+        (Anim::Run, g.player.walk / 4.2)
+    } else if g.player.moving > 0.1 {
+        (Anim::Walk, g.player.walk / 1.45)
+    } else {
+        (Anim::Idle, g.time)
+    }
+}
+
+pub fn build_scene(si: &SceneInput) -> Scene {
     let g = si.game;
     let mut op = MeshBuilder::default();
     let mut tr = MeshBuilder::default();
     let mut insts: Vec<Inst> = Vec::new();
+    let mut chars: Vec<CInst> = Vec::new();
+    let mut cars: Vec<CarInst> = Vec::new();
     let near = |p: Pos2| (p - si.cam).length() < 320.0;
-    let flash = (g.time * 6.0) as i32 % 2 == 0;
     let white = [1.0, 1.0, 1.0];
     for (i, v) in g.vehicles.iter().enumerate() {
         if !near(v.pos) {
             continue;
         }
+        let base = at(v.pos, v.angle);
+        let player_in = g.player.vehicle == Some(i) && g.enter_t <= 0.0;
         if v.kind == VKind::Moto {
-            let base = at(v.pos, v.angle);
             insts.push(Inst { model: M_MOTO, mat: base, phase: 0.0, moving: 0.0, seated: false, tint: if v.dead { [0.25, 0.22, 0.2] } else { white }, aim: false });
-            if v.driver != Driver::None && !v.dead {
-                let who = if g.player.vehicle == Some(i) { M_BILA } else { person_model(i as u32 * 7 + 3) };
-                let rider = base * Mat4::from_translation(Vec3::new(-0.22, -0.16, 0.0));
-                insts.push(Inst { model: who, mat: rider, phase: 0.0, moving: 0.0, seated: true, tint: white, aim: false });
+            if v.driver != Driver::None && !v.dead && (player_in || g.player.vehicle != Some(i)) {
+                let who = if g.player.vehicle == Some(i) { C_BILA } else { person_model(i as u32 * 7 + 3) };
+                chars.push(CInst { model: who, mat: base * Mat4::from_translation(Vec3::new(-0.3, 0.2, 0.0)), anim: Anim::Ride, t: 0.0 });
             }
         } else {
-            let spin = g.time * v.speed() / 0.33;
-            vehicle(&mut op, v.pos, v.angle, v.kind, v.color, v.dead, flash, None, spin);
+            let paint = if v.dead { [0.08, 0.07, 0.07] } else { let c = rgba(v.color, 1.0); [c[0], c[1], c[2]] };
+            let steer = if player_in { si.steer } else { 0.0 };
+            cars.push(CarInst { mesh: car_mesh(v.kind), mat: base, paint, spin: g.time * v.speed() / 0.34, steer });
+            if v.driver != Driver::None && !v.dead && (player_in || g.player.vehicle != Some(i)) {
+                let who = if g.player.vehicle == Some(i) { C_BILA } else { person_model(i as u32 * 7 + 3) };
+                let seat = if v.kind == VKind::Minibus { Vec3::new(1.9, 0.62, -0.45) } else { Vec3::new(0.05, 0.08, -0.38) };
+                chars.push(CInst { model: who, mat: base * Mat4::from_translation(seat), anim: Anim::Drive, t: 0.0 });
+            }
         }
         if v.dead {
             let fl = (g.time * 13.0 + i as f32).sin() * 0.3 + 1.0;
@@ -1080,13 +1156,13 @@ pub fn build_scene(si: &SceneInput) -> (Vec<f32>, Vec<f32>, Vec<Inst>) {
         }
         let model = person_model(i as u32 * 13 + p.color.r() as u32 * 7 + p.color.g() as u32);
         if p.down > 0.0 {
-            let m = Mat4::from_translation(v3(p.pos, 0.18)) * Mat4::from_rotation_y(-p.angle) * Mat4::from_rotation_z(-FRAC_PI_2);
-            insts.push(Inst { model, mat: m, phase: 0.0, moving: 0.0, seated: false, tint: white, aim: false });
+            let m = Mat4::from_translation(v3(p.pos, 0.2)) * Mat4::from_rotation_y(-p.angle) * Mat4::from_rotation_z(FRAC_PI_2);
+            chars.push(CInst { model, mat: m, anim: Anim::Idle, t: 0.0 });
             continue;
         }
-        let moving = if p.flee > 0.0 { 1.0 } else { 0.7 };
-        let phase = g.time * if p.flee > 0.0 { 10.0 } else { 5.5 } + i as f32;
-        insts.push(Inst { model, mat: at(p.pos, p.angle), phase, moving, seated: false, tint: white, aim: false });
+        let talking = g.talk.as_ref().is_some_and(|t| t.ped == i);
+        let (anim, speed) = if talking { (Anim::Talk, 1.0) } else if p.flee > 0.0 { (Anim::Run, 1.0) } else { (Anim::Walk, 1.0) };
+        chars.push(CInst { model, mat: at(p.pos, p.angle), anim, t: g.time * speed + i as f32 * 0.37 });
     }
     for r in si.remotes {
         let pos = Pos2::new(r.x, r.y);
@@ -1095,33 +1171,56 @@ pub fn build_scene(si: &SceneInput) -> (Vec<f32>, Vec<f32>, Vec<Inst>) {
         }
         let c = Color32::from_rgb(r.color[0], r.color[1], r.color[2]);
         if r.kind == 0 {
-            insts.push(Inst { model: M_JEUNE, mat: at(pos, r.angle), phase: g.time * 6.0, moving: 0.6, seated: false, tint: white, aim: false });
+            chars.push(CInst { model: C_JEUNE, mat: at(pos, r.angle), anim: Anim::Walk, t: g.time });
         } else if VKind::from_net(r.kind) == VKind::Moto {
             insts.push(Inst { model: M_MOTO, mat: at(pos, r.angle), phase: 0.0, moving: 0.0, seated: false, tint: white, aim: false });
-            insts.push(Inst { model: M_JEUNE, mat: at(pos, r.angle) * Mat4::from_translation(Vec3::new(-0.22, -0.16, 0.0)), phase: 0.0, moving: 0.0, seated: true, tint: white, aim: false });
+            chars.push(CInst { model: C_JEUNE, mat: at(pos, r.angle) * Mat4::from_translation(Vec3::new(-0.3, 0.2, 0.0)), anim: Anim::Ride, t: 0.0 });
         } else {
-            vehicle(&mut op, pos, r.angle, VKind::from_net(r.kind), c, false, flash, None, g.time * 20.0);
+            let k = VKind::from_net(r.kind);
+            let cc = rgba(c, 1.0);
+            cars.push(CarInst { mesh: car_mesh(k), mat: at(pos, r.angle), paint: [cc[0], cc[1], cc[2]], spin: g.time * 20.0, steer: 0.0 });
         }
         op.cuboid(&Mat4::from_translation(v3(pos, 3.2)), Vec3::new(0.2, 0.2, 0.2), rgba(c, 1.0), L_EMISSIVE);
     }
-    if g.player.vehicle.is_none() {
-        let base = at(g.player.pos, g.player.angle);
-        insts.push(Inst { model: M_BILA, mat: base, phase: g.player.walk * 2.4, moving: g.player.moving, seated: false, tint: white, aim: g.aiming && g.weapon > 0 });
-        // the weapon in Bila's right hand
-        let metal = rgb(38, 38, 42);
-        if g.weapon > 0 {
-            let len = if g.weapon == 2 { 0.42 } else { 0.11 };
-            let m = if g.aiming {
-                base * Mat4::from_translation(Vec3::new(0.62 + len * 0.6, 1.4, 0.16))
-            } else {
-                base * Mat4::from_translation(Vec3::new(0.05, 0.82 - len * 0.3, 0.24)) * Mat4::from_rotation_z(-1.35)
-            };
-            op.cuboid(&m, Vec3::new(len, 0.035, 0.022), metal, L_PLAIN);
-            op.cuboid(&(m * Mat4::from_translation(Vec3::new(-len * 0.6, -0.07, 0.0)) * Mat4::from_rotation_z(-0.25)), Vec3::new(0.03, 0.06, 0.02), metal, L_PLAIN);
-            if g.weapon == 2 {
-                op.cuboid(&(m * Mat4::from_translation(Vec3::new(-len * 0.2, -0.08, 0.0)) * Mat4::from_rotation_z(0.3)), Vec3::new(0.025, 0.07, 0.02), rgb(70, 45, 25), L_PLAIN);
-                op.cuboid(&(m * Mat4::from_translation(Vec3::new(-len * 1.1, -0.02, 0.0))), Vec3::new(0.12, 0.045, 0.025), rgb(70, 45, 25), L_PLAIN);
+    // Bila on foot (or getting in / out)
+    let on_foot = g.player.vehicle.is_none() || g.enter_t > 0.0;
+    if on_foot {
+        let (anim, t) = if g.enter_t > 0.0 { (Anim::Walk, g.time) } else { bila_anim(g) };
+        let pos = g.player.pos;
+        let mut base = at(pos, g.player.angle);
+        if let Some(a) = &g.activity {
+            if a.kind == ActKind::Sleep {
+                base = Mat4::from_translation(v3(pos, 0.72)) * Mat4::from_rotation_y(-g.player.angle) * Mat4::from_rotation_z(FRAC_PI_2);
+            } else if matches!(a.kind, ActKind::Eat | ActKind::Sit | ActKind::Tv) {
+                base = base * Mat4::from_translation(Vec3::new(0.0, -0.42, 0.0));
             }
+        }
+        chars.push(CInst { model: C_BILA, mat: base, anim, t });
+        // the weapon held in the right hand (bone from the Blender rig)
+        if g.weapon > 0 && g.activity.is_none() {
+            if let Some((hand, hm)) = skinned::hand_world(C_BILA, base, anim, t, "handR") {
+                let metal = rgb(38, 38, 42);
+                let len = if g.weapon == 2 { 0.42 } else { 0.11 };
+                let fwd = if g.aiming { Vec3::new(g.player.angle.cos(), 0.0, g.player.angle.sin()) } else { hm.transform_vector3(Vec3::new(0.0, -1.0, 0.0)).normalize_or_zero() };
+                let yaw = fwd.z.atan2(fwd.x);
+                let pitch = fwd.y.asin();
+                let m = Mat4::from_translation(hand + fwd * len * 0.5) * Mat4::from_rotation_y(-yaw) * Mat4::from_rotation_z(pitch);
+                op.cuboid(&m, Vec3::new(len, 0.035, 0.022), metal, L_PLAIN);
+                op.cuboid(&(m * Mat4::from_translation(Vec3::new(-len * 0.6, -0.07, 0.0)) * Mat4::from_rotation_z(-0.25)), Vec3::new(0.03, 0.06, 0.02), metal, L_PLAIN);
+                if g.weapon == 2 {
+                    op.cuboid(&(m * Mat4::from_translation(Vec3::new(-len * 0.2, -0.08, 0.0)) * Mat4::from_rotation_z(0.3)), Vec3::new(0.025, 0.07, 0.02), rgb(70, 45, 25), L_PLAIN);
+                    op.cuboid(&(m * Mat4::from_translation(Vec3::new(-len * 1.1, -0.02, 0.0))), Vec3::new(0.12, 0.045, 0.025), rgb(70, 45, 25), L_PLAIN);
+                }
+            }
+        }
+    }
+    // food on the table while eating
+    if let Some(a) = &g.activity {
+        if a.kind == ActKind::Eat {
+            let f = Vec3::new(g.player.angle.cos(), 0.0, g.player.angle.sin());
+            let p = v3(g.player.pos, 0.78) + f * 0.55;
+            op.cylinder(p, 0.15, 0.15, 0.02, 20, rgb(245, 245, 240), L_PLAIN, true);
+            op.cylinder(p + Vec3::Y * 0.02, 0.1, 0.06, 0.05, 12, rgb(200, 150, 60), L_PLAIN, true);
         }
     }
     // gunfire effects
@@ -1149,7 +1248,8 @@ pub fn build_scene(si: &SceneInput) -> (Vec<f32>, Vec<f32>, Vec<Inst>) {
             }
         }
     }
-    // gun shops
+    let pulse = (g.time * 3.0).sin() * 0.5 + 0.5;
+    // gun shops and doors
     for s in &g.shops {
         if near(*s) {
             tr.cylinder(v3(*s, 0.0), 2.5, 2.5, 2.5, 20, [1.0, 0.25, 0.2, 0.25], L_EMISSIVE, false);
@@ -1158,7 +1258,15 @@ pub fn build_scene(si: &SceneInput) -> (Vec<f32>, Vec<f32>, Vec<Inst>) {
             op.cuboid(&(m * Mat4::from_translation(Vec3::new(0.25, -0.2, 0.0))), Vec3::new(0.1, 0.2, 0.07), [1.0, 0.3, 0.25, 1.0], L_EMISSIVE);
         }
     }
-    let pulse = (g.time * 3.0).sin() * 0.5 + 0.5;
+    if g.inside.is_none() {
+        for d in &g.doors {
+            if near(d.pos) {
+                tr.cylinder(v3(d.pos, 0.0), 1.6, 1.6, 2.2, 20, [0.75, 0.45, 1.0, 0.28], L_EMISSIVE, false);
+                let m = Mat4::from_translation(v3(d.pos, 2.9 + pulse * 0.2)) * Mat4::from_rotation_y(g.time * 1.5);
+                op.cuboid(&m, Vec3::new(0.35, 0.35, 0.06), [0.8, 0.5, 1.0, 1.0], L_EMISSIVE);
+            }
+        }
+    }
     if let Some(t) = si.marker {
         tr.cylinder(v3(t, 0.0), 4.0 + pulse * 0.4, 4.0 + pulse * 0.4, 6.0, 24, [0.25, 0.8, 1.0, 0.3], L_EMISSIVE, false);
     }
@@ -1180,7 +1288,30 @@ pub fn build_scene(si: &SceneInput) -> (Vec<f32>, Vec<f32>, Vec<Inst>) {
             op.cuboid(&m, Vec3::new(0.5, 0.5, 0.08), [0.3, 1.0, 0.45, 1.0], L_EMISSIVE);
         }
     }
-    (op.v, tr.v, insts)
+    if g.inside == Some(statics::I_GARAGE) {
+        if let Some((k, col)) = g.garage_car {
+            let a = statics::anchor(statics::I_GARAGE);
+            if k == VKind::Moto {
+                insts.push(Inst { model: M_MOTO, mat: at(Pos2::new(a.x + 0.5, a.y), 0.0), phase: 0.0, moving: 0.0, seated: false, tint: white, aim: false });
+            } else {
+                let c = rgba(col, 1.0);
+                cars.push(CarInst { mesh: car_mesh(k), mat: Mat4::from_translation(Vec3::new(a.x + 0.8, 0.02, a.y)), paint: [c[0], c[1], c[2]], spin: 0.0, steer: 0.0 });
+            }
+        }
+    }
+    // interaction spots inside
+    if let Some(ii) = g.inside {
+        let it = &statics::interiors()[ii];
+        let a = statics::anchor(ii);
+        for s in &it.spots {
+            let p = Pos2::new(a.x + s.x, a.y + s.z);
+            if (p - g.player.pos).length() > 5.0 || g.activity.is_some() {
+                continue;
+            }
+            tr.cylinder(v3(p, 0.0), 0.45, 0.45, 0.05, 16, [1.0, 0.85, 0.3, 0.55], L_EMISSIVE, false);
+        }
+    }
+    Scene { opaque: op.v, translucent: tr.v, insts, chars, cars }
 }
 
 // ---------------------------------------------------------------- GL side
@@ -1205,6 +1336,9 @@ pub struct R3D {
     trans: Gpu,
     map: Arc<Map>,
     models: Models,
+    skinned: Skinned,
+    vehicles: Vec<Gpu>,
+    rooms: Vec<Gpu>,
 }
 
 const VS: &str = r#"
@@ -1215,11 +1349,16 @@ layout(location=3) in vec2 a_uv;
 layout(location=4) in float a_layer;
 uniform mat4 u_vp;
 uniform mat4 u_lvp;
+uniform mat4 u_model;
+uniform vec3 u_paint;
 out vec3 v_pos; out vec3 v_nrm; out vec4 v_col; out vec2 v_uv; out float v_layer; out vec4 v_sc;
 void main() {
-    v_pos = a_pos; v_nrm = a_nrm; v_col = a_col; v_uv = a_uv; v_layer = a_layer;
-    v_sc = u_lvp * vec4(a_pos + a_nrm * 0.08, 1.0);
-    gl_Position = u_vp * vec4(a_pos, 1.0);
+    vec4 wp = u_model * vec4(a_pos, 1.0);
+    v_pos = wp.xyz; v_nrm = normalize(mat3(u_model) * a_nrm); v_uv = a_uv; v_layer = a_layer;
+    bool paint = a_col.r > 0.99 && a_col.g < 0.01 && a_col.b > 0.99;
+    v_col = paint ? vec4(u_paint, a_col.a) : a_col;
+    v_sc = u_lvp * vec4(wp.xyz + v_nrm * 0.08, 1.0);
+    gl_Position = u_vp * wp;
 }
 "#;
 
@@ -1280,6 +1419,7 @@ void main() {
     if (L == 11.0) { ks = 0.6; shin = 80.0; }
     if (L == 6.0) { ks = 0.9; shin = 120.0; }
     if (L == 1.0) { ks = 0.06; shin = 16.0; }
+    if (L == 8.0 && v_col.a > 0.995) { ks = 0.0; }
     if (ks > 0.0) {
         vec3 v = normalize(u_cam - v_pos);
         vec3 h = normalize(v + u_sun);
@@ -1300,8 +1440,9 @@ const SVS: &str = r#"
 layout(location=0) in vec3 a_pos;
 layout(location=4) in float a_layer;
 uniform mat4 u_lvp;
+uniform mat4 u_model;
 out float v_layer;
-void main() { v_layer = a_layer; gl_Position = u_lvp * vec4(a_pos, 1.0); }
+void main() { v_layer = a_layer; gl_Position = u_lvp * u_model * vec4(a_pos, 1.0); }
 "#;
 const SFS: &str = r#"
 precision highp float;
@@ -1416,6 +1557,36 @@ unsafe fn array_texture(gl: &glow::Context, w: usize, h: usize, layers: usize, d
 }
 
 impl R3D {
+    unsafe fn draw_statics(&self, gl: &glow::Context, prog: glow::Program, fd: &FrameData) {
+        let lm = gl.get_uniform_location(prog, "u_model");
+        let lp = gl.get_uniform_location(prog, "u_paint");
+        if let Some(i) = fd.interior {
+            if let Some(g) = self.rooms.get(i) {
+                let a = statics::anchor(i);
+                gl.uniform_matrix_4_f32_slice(lm.as_ref(), false, &Mat4::from_translation(Vec3::new(a.x, 0.02, a.y)).to_cols_array());
+                gl.bind_vertex_array(Some(g.vao));
+                gl.draw_arrays(glow::TRIANGLES, 0, g.count);
+            }
+        }
+        for c in &fd.cars {
+            let (Some(body), Some(wheel)) = (self.vehicles.get(c.mesh), self.vehicles.get(statics::V_WHEEL)) else { continue };
+            gl.uniform_3_f32(lp.as_ref(), c.paint[0], c.paint[1], c.paint[2]);
+            gl.uniform_matrix_4_f32_slice(lm.as_ref(), false, &c.mat.to_cols_array());
+            gl.bind_vertex_array(Some(body.vao));
+            gl.draw_arrays(glow::TRIANGLES, 0, body.count);
+            gl.bind_vertex_array(Some(wheel.vao));
+            for (k, w) in statics::wheels(c.mesh).iter().enumerate() {
+                let steer = if k < 2 { c.steer } else { 0.0 };
+                let flip = if w[2] < 0.0 { Mat4::from_rotation_y(std::f32::consts::PI) } else { Mat4::IDENTITY };
+                let m = c.mat * Mat4::from_translation(Vec3::new(w[0], w[1], w[2])) * Mat4::from_rotation_y(-steer) * flip * Mat4::from_rotation_z(if w[2] < 0.0 { c.spin } else { -c.spin });
+                gl.uniform_matrix_4_f32_slice(lm.as_ref(), false, &m.to_cols_array());
+                gl.draw_arrays(glow::TRIANGLES, 0, wheel.count);
+            }
+        }
+        gl.uniform_matrix_4_f32_slice(lm.as_ref(), false, &Mat4::IDENTITY.to_cols_array());
+        gl.uniform_3_f32(lp.as_ref(), 1.0, 0.0, 1.0);
+    }
+
     pub fn new(gl: &glow::Context, map: Arc<Map>) -> Result<R3D, String> {
         unsafe {
             let prog = compile(gl, VS, FS)?;
@@ -1457,7 +1628,20 @@ impl R3D {
                 return Err(format!("framebuffer des ombres incomplet ({status:#x})"));
             }
             let models = Models::new(gl, |vs, fs| compile(gl, vs, fs))?;
-            Ok(R3D { prog, shadow_prog, sky_prog, tex, nrm, sky, shadow_tex, shadow_fb, chunks: HashMap::new(), dynamic: make_gpu(gl), trans: make_gpu(gl), map, models })
+            let skinned = Skinned::new(gl, |vs, fs| compile(gl, vs, fs))?;
+            let mut vehicles = Vec::new();
+            for m in statics::vehicles() {
+                let mut gpu = make_gpu(gl);
+                upload(gl, &mut gpu, m, glow::STATIC_DRAW);
+                vehicles.push(gpu);
+            }
+            let mut rooms = Vec::new();
+            for it in statics::interiors() {
+                let mut gpu = make_gpu(gl);
+                upload(gl, &mut gpu, &it.mesh, glow::STATIC_DRAW);
+                rooms.push(gpu);
+            }
+            Ok(R3D { prog, shadow_prog, sky_prog, tex, nrm, sky, shadow_tex, shadow_fb, chunks: HashMap::new(), dynamic: make_gpu(gl), trans: make_gpu(gl), map, models, skinned, vehicles, rooms })
         }
     }
 
@@ -1508,6 +1692,7 @@ impl R3D {
             gl.polygon_offset(1.5, 2.0);
             gl.use_program(Some(self.shadow_prog));
             gl.uniform_matrix_4_f32_slice(gl.get_uniform_location(self.shadow_prog, "u_lvp").as_ref(), false, &fd.light_vp.to_cols_array());
+            gl.uniform_matrix_4_f32_slice(gl.get_uniform_location(self.shadow_prog, "u_model").as_ref(), false, &Mat4::IDENTITY.to_cols_array());
             let fcx = (fd.focus.x / CHUNK).floor() as i32;
             let fcz = (fd.focus.z / CHUNK).floor() as i32;
             for (k, c) in &self.chunks {
@@ -1531,7 +1716,10 @@ impl R3D {
                 fog: fd.fog,
                 texel: 1.0 / SHADOW_SIZE as f32,
             };
+            gl.use_program(Some(self.shadow_prog));
+            self.draw_statics(gl, self.shadow_prog, fd);
             self.models.draw(gl, &mf, &fd.insts, true, self.shadow_tex);
+            self.skinned.draw(gl, &mf, &fd.chars, true, self.shadow_tex);
             gl.disable(glow::POLYGON_OFFSET_FILL);
             gl.bind_framebuffer(glow::FRAMEBUFFER, None);
 
@@ -1566,6 +1754,8 @@ impl R3D {
             let loc = |n: &str| gl.get_uniform_location(self.prog, n);
             gl.uniform_matrix_4_f32_slice(loc("u_vp").as_ref(), false, &fd.view_proj.to_cols_array());
             gl.uniform_matrix_4_f32_slice(loc("u_lvp").as_ref(), false, &fd.light_vp.to_cols_array());
+            gl.uniform_matrix_4_f32_slice(loc("u_model").as_ref(), false, &Mat4::IDENTITY.to_cols_array());
+            gl.uniform_3_f32(loc("u_paint").as_ref(), 1.0, 0.0, 1.0);
             gl.uniform_3_f32(loc("u_cam").as_ref(), fd.cam.x, fd.cam.y, fd.cam.z);
             gl.uniform_3_f32(loc("u_sun").as_ref(), fd.sun.x, fd.sun.y, fd.sun.z);
             gl.uniform_3_f32(loc("u_sun_col").as_ref(), fd.sun_col.x, fd.sun_col.y, fd.sun_col.z);
@@ -1604,7 +1794,11 @@ impl R3D {
                 fog: fd.fog,
                 texel: 1.0 / SHADOW_SIZE as f32,
             };
+            self.draw_statics(gl, self.prog, fd);
             self.models.draw(gl, &mf, &fd.insts, false, self.shadow_tex);
+            self.skinned.draw(gl, &mf, &fd.chars, false, self.shadow_tex);
+            // the translucent pass uses the main program again
+            gl.use_program(Some(self.prog));
 
             gl.enable(glow::BLEND);
             gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);

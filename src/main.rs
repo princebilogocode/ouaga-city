@@ -3,6 +3,9 @@
 
 mod empire;
 mod game;
+mod life;
+mod skinned;
+mod statics;
 mod map;
 mod models;
 mod net;
@@ -54,6 +57,8 @@ struct App {
     cam_pos: Option<Vec3>,
     aim_yaw: f32,
     was_aiming: bool,
+    fov: f32,
+    steer: f32,
     bila_face: Option<egui::TextureHandle>,
     bila_full: Option<egui::TextureHandle>,
     menu_sky: Option<egui::TextureHandle>,
@@ -111,6 +116,8 @@ impl App {
             cam_pos: None,
             aim_yaw: 0.0,
             was_aiming: false,
+            fov: 62.0,
+            steer: 0.0,
             bila_face: None,
             bila_full: None,
             menu_sky: None,
@@ -121,6 +128,26 @@ impl App {
                 app.start_story(0);
             } else if !std::env::args().any(|a| a == "--menu") {
                 app.start_free(42);
+                // test hook: OC_INSIDE=<room> [OC_ACT=<spot name>]
+                if let (Ok(r), Some(g)) = (std::env::var("OC_INSIDE"), app.game.as_mut()) {
+                    let i: usize = r.parse().unwrap_or(0);
+                    g.player.vehicle = None;
+                    g.vehicles.clear();
+                    g.outside = (g.player.pos, 0.0);
+                    g.inside = Some(i);
+                    let it = &statics::interiors()[i];
+                    let a = statics::anchor(i);
+                    g.player.pos = Pos2::new(a.x - it.size[0] / 2.0 + 1.6, a.y + 0.4);
+                    g.player.angle = 0.0;
+                    if let Ok(spot) = std::env::var("OC_ACT") {
+                        if let Some(sp) = it.spots.iter().find(|s| s.name == spot) {
+                            g.player.pos = Pos2::new(a.x + sp.x, a.y + sp.z);
+                            g.player.angle = sp.yaw;
+                            g.player.money += 5000;
+                            g.interact(&app.map);
+                        }
+                    }
+                }
             }
         }
         app
@@ -279,7 +306,7 @@ impl App {
             });
     }
 
-    fn read_input(&self, ctx: &egui::Context) -> (Input, [bool; 6], f32, f32, bool, f32) {
+    fn read_input(&self, ctx: &egui::Context) -> (Input, [bool; 7], f32, f32, bool, f32) {
         ctx.input(|i| {
             let k = |a: Key, b: Key, c: Key| i.key_down(a) || i.key_down(b) || i.key_down(c);
             let inp = Input {
@@ -309,7 +336,7 @@ impl App {
             let drag = if i.pointer.primary_down() && !aiming { i.pointer.delta().x } else { 0.0 };
             let aim_dx = if aiming { i.pointer.delta().x } else { 0.0 };
             let advance = i.key_pressed(Key::Enter) || i.key_pressed(Key::Space) || i.pointer.primary_clicked();
-            let keys = [i.key_pressed(Key::M), i.key_pressed(Key::Escape), i.key_pressed(Key::C), i.key_pressed(Key::E), i.key_pressed(Key::B), i.key_pressed(Key::Tab)];
+            let keys = [i.key_pressed(Key::M), i.key_pressed(Key::Escape), i.key_pressed(Key::C), i.key_pressed(Key::E), i.key_pressed(Key::B), i.key_pressed(Key::Tab), i.key_pressed(Key::T)];
             (inp, keys, i.smooth_scroll_delta.y, drag, advance, aim_dx)
         })
     }
@@ -318,12 +345,16 @@ impl App {
         let ctx = ui.ctx().clone();
         let screen = ui.max_rect();
         let dt = if self.shot.is_some() { 1.0 / 60.0 } else { ctx.input(|i| i.stable_dt).min(0.05) };
-        let (mut inp, [map_key, esc, cam_key, buy_key, emp_key, tab_key], scroll, drag, advance, aim_dx) = self.read_input(&ctx);
+        let (mut inp, [map_key, esc, cam_key, buy_key, emp_key, tab_key, talk_key], scroll, drag, advance, aim_dx) = self.read_input(&ctx);
         if self.shot.is_some() {
             if std::env::args().any(|a| a == "--aim") {
                 inp = Input { action: self.frame == 3, aim: self.frame > 20 && std::env::var("OC_NOAIM").is_err(), fire: std::env::var("OC_FIRE").is_ok() && self.frame > 60 && self.frame % 12 == 0, switch: if self.frame == 5 && std::env::var("OC_W0").is_err() { Some(1) } else { None }, ..Default::default() };
             } else {
-                inp = Input { up: self.frame > 10 && self.story.is_none(), ..Default::default() };
+                inp = Input { up: self.frame > 10 && self.story.is_none() && std::env::var("OC_STILL").is_err(), action: std::env::var("OC_WALK").is_ok() && self.frame == 3, ..Default::default() };
+                if std::env::var("OC_WALK").is_ok() {
+                    inp.up = self.frame > 20;
+                    inp.sprint = std::env::var("OC_RUN").is_ok();
+                }
             }
         }
         if map_key {
@@ -409,6 +440,25 @@ impl App {
                 }
             }
         }
+        // doors, interiors, activities, conversations
+        let mut used = prompt.is_some() && buy_key;
+        if prompt.is_none() || game.inside.is_some() {
+            if let Some(t) = game.interact_prompt() {
+                prompt = Some(t);
+            }
+            if buy_key && !used {
+                used = game.interact(&map);
+            }
+        }
+        let _ = used;
+        if talk_key {
+            game.start_talk();
+        }
+        if game.ev_saved {
+            game.ev_saved = false;
+            empire.save(game.player.money);
+        }
+        let pp = game.player_pos();
         let worth = empire.net_worth(game.player.money);
         let income = empire.income();
         let biz: Vec<(Pos2, bool)> = empire.list.iter().map(|b| (b.place, b.owned)).collect();
@@ -438,7 +488,10 @@ impl App {
         let yaw = self.cam_yaw + self.orbit;
         let fwd = Vec3::new(yaw.cos(), 0.0, yaw.sin());
         let right = Vec3::new(-yaw.sin(), 0.0, yaw.cos());
-        let (dist, height) = if self.high_cam {
+        let inside = game.inside;
+        let (dist, height) = if inside.is_some() {
+            (3.2, 1.1)
+        } else if self.high_cam {
             (24.0, 22.0)
         } else if in_vehicle {
             (7.5 + speed.abs() * 0.1, 2.8 + speed.abs() * 0.03)
@@ -482,6 +535,16 @@ impl App {
                 eye_target.z = v.pos.y + n.y * r;
             }
         }
+        // inside a room: stay between the walls and under the ceiling
+        if let Some(ii) = inside {
+            let it = &statics::interiors()[ii];
+            let a = statics::anchor(ii);
+            eye_target = focus - fwd * 3.2 * self.dist_mul.min(1.4) + Vec3::Y * 0.9;
+            eye_target.x = eye_target.x.clamp(a.x - it.size[0] / 2.0 + 0.3, a.x + it.size[0] / 2.0 - 0.3);
+            eye_target.z = eye_target.z.clamp(a.y - it.size[1] / 2.0 + 0.3, a.y + it.size[1] / 2.0 - 0.3);
+            eye_target.y = eye_target.y.min(it.size[2] - 0.35);
+            reach = 0.5;
+        }
         let blocked = reach < 1.0;
         let eye = eye_target;
         let eye = match self.cam_pos {
@@ -491,7 +554,10 @@ impl App {
         self.cam_pos = Some(eye);
         let look = if game.aiming { focus + fwd * 25.0 + right * 0.6 } else { focus + fwd * 3.0 };
         let aspect = screen.width() / screen.height().max(1.0);
-        let proj = Mat4::perspective_rh_gl(60f32.to_radians(), aspect, 0.2, 1600.0);
+        // a wider field of view at speed, as in the big open-world games
+        let target_fov = if in_vehicle { 60.0 + (speed.abs() * 0.45).min(16.0) } else if game.aiming { 52.0 } else { 62.0 };
+        self.fov += (target_fov - self.fov) * (dt * 3.0).min(1.0);
+        let proj = Mat4::perspective_rh_gl(self.fov.to_radians(), aspect, 0.15, 1600.0);
         let view = Mat4::look_at_rh(eye, look, Vec3::Y);
 
         let mut remotes: Vec<Remote> = Vec::new();
@@ -508,7 +574,10 @@ impl App {
 
         self.zone_timer -= dt;
         if self.zone_timer <= 0.0 {
-            self.zone = map.place_name(pp);
+            self.zone = match game.inside {
+                Some(i) => statics::interiors()[i].title.to_string(),
+                None => map.place_name(pp),
+            };
             self.zone_timer = 0.5;
         }
 
@@ -519,8 +588,19 @@ impl App {
         });
         let marker = if chase_tag.is_some() { None } else { story_target };
         let night = render::night_factor(game.hours);
-        let light = r3d::lighting(game.hours);
-        let (opaque, translucent, insts) = r3d::build_scene(&r3d::SceneInput {
+        let mut light = r3d::lighting(game.hours);
+        let night = if inside.is_some() {
+            // indoor light: lamps and daylight through the windows
+            light.sun_col *= 0.12;
+            light.ambient = Vec3::new(0.86, 0.8, 0.72);
+            light.fog = 2000.0;
+            0.0
+        } else {
+            night
+        };
+        let steer_in = (inp.right as i32 - inp.left as i32) as f32 * 0.45;
+        self.steer += (steer_in - self.steer) * (dt * 8.0).min(1.0);
+        let scene = r3d::build_scene(&r3d::SceneInput {
             game,
             remotes: &remotes,
             cam: Pos2::new(eye.x, eye.z),
@@ -528,6 +608,7 @@ impl App {
             chase_tag,
             bila_suit: worth >= 1_000_000,
             biz_markers: &biz,
+            steer: self.steer,
         });
         let fd = r3d::FrameData {
             view_proj: proj * view,
@@ -541,9 +622,12 @@ impl App {
             fog: light.fog,
             night,
             focus,
-            opaque,
-            translucent,
-            insts,
+            opaque: scene.opaque,
+            translucent: scene.translucent,
+            insts: scene.insts,
+            chars: scene.chars,
+            cars: scene.cars,
+            interior: inside,
         };
 
         let p = ui.painter().clone();
@@ -625,7 +709,8 @@ impl App {
                 "",
                 "ZQSD / WASD / flèches : marcher (tourner + avancer) ou conduire",
                 "F : monter / descendre d'un véhicule (voler = recherché !)",
-                "E : acheter une entreprise ou à l'armurerie (marqueur rouge) · B : ton empire",
+                "E : entrer (portes violettes : maquis, appartement, salle de sport, garage), utiliser, acheter · B : empire",
+                "T : parler aux passants · au maquis : manger · à l'appartement : dormir (sauvegarde) · salle : s'entraîner",
                 "Clic droit (ou V) : viser · clic gauche (ou X) : tirer / frapper · 1/2/3 ou Tab : changer d'arme",
                 "Espace : frein à main · Maj : courir · H : klaxon",
                 "Souris (glisser) : caméra · molette : distance · C : caméra haute · M : carte",
@@ -633,7 +718,7 @@ impl App {
                 "Stations-service : réparation à l'arrêt (500 FCFA)",
             ];
             for (i, l) in lines.iter().enumerate() {
-                p.text(screen.center() + vec2(0.0, -150.0 + i as f32 * 26.0), Align2::CENTER_CENTER, l, FontId::proportional(if i == 0 { 26.0 } else { 17.0 }), Color32::WHITE);
+                p.text(screen.center() + vec2(0.0, -175.0 + i as f32 * 26.0), Align2::CENTER_CENTER, l, FontId::proportional(if i == 0 { 26.0 } else { 17.0 }), Color32::WHITE);
             }
             let r = Rect::from_center_size(screen.center() + vec2(0.0, 150.0), vec2(220.0, 36.0));
             if ui.put(r, egui::Button::new("Retour au menu")).clicked() {

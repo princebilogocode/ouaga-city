@@ -2377,6 +2377,7 @@ dependencies = [
  "glam",
  "gltf",
  "image",
+ "serde_json",
  "winit",
 ]
 

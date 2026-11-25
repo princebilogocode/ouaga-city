@@ -1,4 +1,4 @@
-use crate::game::{Driver, Game, VKind};
+use crate::game::{Game, VKind};
 use crate::empire::fcfa;
 use crate::map::Map;
 use crate::net::Remote;
@@ -246,9 +246,28 @@ pub fn draw_hud(p: &Painter, h: &Hud) {
         outlined(p, ph.right_top() + vec2(12.0, 48.0), Align2::LEFT_TOP, "À pied · F pour monter", 14.0, Color32::WHITE);
     }
     outlined(p, ph.left_bottom() + vec2(0.0, 14.0), Align2::LEFT_TOP, h.zone, 20.0, Color32::from_rgb(255, 236, 200));
+    // hunger, fitness, strength
+    for (k, (label, v, col)) in [("Faim", g.hunger, Color32::from_rgb(240, 150, 40)), ("Forme", g.forme, Color32::from_rgb(70, 200, 230)), ("Force", g.force, Color32::from_rgb(230, 80, 70))].iter().enumerate() {
+        let x = ph.left() + k as f32 * 66.0;
+        let y = ph.bottom() + 58.0;
+        bar(p, Rect::from_min_size(pos2(x, y), vec2(54.0, 8.0)), *v / 100.0, *col);
+        outlined(p, pos2(x, y - 2.0), Align2::LEFT_BOTTOM, label, 11.0, Color32::from_white_alpha(220));
+    }
+    if g.hunger < 15.0 {
+        outlined(p, screen.center_top() + vec2(0.0, 140.0), Align2::CENTER_TOP, "Bila a faim : va manger dans un maquis (porte violette)", 18.0, Color32::from_rgb(255, 170, 60));
+    }
+    // conversation subtitles
+    if let Some(t) = &g.talk {
+        let (who, line) = if t.t < 2.8 { ("Passant", t.line.as_str()) } else { ("Bila", t.reply.as_str()) };
+        let text = format!("{who} : {line}");
+        let galley = p.layout_no_wrap(text.clone(), FontId::proportional(19.0), Color32::WHITE);
+        let r = Rect::from_center_size(screen.center_bottom() + vec2(0.0, -180.0), galley.size() + vec2(36.0, 18.0));
+        p.rect_filled(r, 8.0, Color32::from_black_alpha(170));
+        p.galley(r.center() - galley.size() * 0.5, galley, if who == "Bila" { Color32::from_rgb(255, 215, 90) } else { Color32::WHITE });
+    }
 
     // messages
-    let mut y = ph.bottom() + 50.0;
+    let mut y = ph.bottom() + 76.0;
     for (m, t) in g.messages.iter() {
         let a = (t.min(1.0) * 255.0) as u8;
         let galley = p.layout(m.clone(), FontId::proportional(15.0), Color32::WHITE, 420.0);
