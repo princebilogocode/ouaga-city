@@ -57,6 +57,7 @@ struct App {
     bila_face: Option<egui::TextureHandle>,
     bila_full: Option<egui::TextureHandle>,
     menu_sky: Option<egui::TextureHandle>,
+    faces: Vec<(&'static str, egui::TextureHandle)>,
 }
 
 const PLAYER_COLORS: [Color32; 6] = [
@@ -113,6 +114,7 @@ impl App {
             bila_face: None,
             bila_full: None,
             menu_sky: None,
+            faces: Vec::new(),
         };
         if app.shot.is_some() {
             if std::env::args().any(|a| a == "--story") {
@@ -158,7 +160,16 @@ impl App {
         if self.bila_face.is_none() {
             self.bila_face = load_tex(ctx, "bila_face", include_bytes!("../assets/bila_portrait.jpg"));
             self.bila_full = load_tex(ctx, "bila_full", include_bytes!("../assets/bila_full.jpg"));
-            self.menu_sky = load_tex(ctx, "menu_sky", include_bytes!("../assets/sky/couchant.jpg"));
+            self.menu_sky = load_tex(ctx, "menu_sky", include_bytes!("../assets/portraits/affiche.png"));
+            for (who, bytes) in [
+                ("Issouf", &include_bytes!("../assets/portraits/issouf.png")[..]),
+                ("Mme Kaboré", &include_bytes!("../assets/portraits/kabore.png")[..]),
+                ("Le Commandant", &include_bytes!("../assets/portraits/commandant.png")[..]),
+            ] {
+                if let Some(t) = load_tex(ctx, who, bytes) {
+                    self.faces.push((who, t));
+                }
+            }
         }
     }
 
@@ -168,7 +179,16 @@ impl App {
         p.rect_filled(screen, 0.0, Color32::from_rgb(40, 28, 20));
         if let Some(t) = &self.menu_sky {
             // the sunset band of the panorama, stretched over the screen
-            p.image(t.id(), screen, Rect::from_min_max(Pos2::new(0.1, 0.18), Pos2::new(0.6, 0.52)), Color32::WHITE);
+            let img_aspect = 1376.0 / 768.0;
+            let scr_aspect = screen.width() / screen.height();
+            let uv = if scr_aspect < img_aspect {
+                let w = scr_aspect / img_aspect;
+                Rect::from_min_max(Pos2::new(0.5 - w * 0.5, 0.0), Pos2::new(0.5 + w * 0.5, 1.0))
+            } else {
+                let h = img_aspect / scr_aspect;
+                Rect::from_min_max(Pos2::new(0.0, 0.5 - h * 0.5), Pos2::new(1.0, 0.5 + h * 0.5))
+            };
+            p.image(t.id(), screen, uv, Color32::WHITE);
         }
         // the real street map of Ouaga, faint, over the sky
         let ext = self.map.max - self.map.min;
@@ -559,7 +579,8 @@ impl App {
         if let Some(st) = &self.story {
             if let Some((who, text)) = st.dialog_line() {
                 let (skin, clothes) = story::speaker_colors(who);
-                render::draw_dialog(&p, screen, who, text, skin, clothes, if who == "Bila" { face } else { None });
+                let photo = if who == "Bila" { face } else { self.faces.iter().find(|(n, _)| *n == who).map(|(_, t)| t.id()) };
+                render::draw_dialog(&p, screen, who, text, skin, clothes, photo);
             }
             if let Some((b, t)) = &st.banner {
                 render::draw_banner(&p, screen, b, *t);
