@@ -4,6 +4,7 @@ Le rêve ouagalais : jeu en monde ouvert 3D dans les vraies rues et les vrais b�
 
 - **Mode histoire** : 12 chapitres — Bila passe du taxi-moto à l'homme le plus riche d'Afrique (maquis, flotte de motos, cars, hôtel à Ouaga 2000, Faso Dan Fani, karité, télécom, banque, énergie solaire).
 - 108 000 bâtiments réels (OpenStreetMap), monuments (Héros nationaux, Place des Cinéastes, Nations Unies, Flambeau de la Révolution…), mosquées, églises, baobabs.
+- Personnages et moto en vraie 3D générés avec fal.ai (Bila, passants burkinabè), armes (poings, pistolet, fusil d'assaut), visée à l'épaule, police et gangs qui ripostent, armureries.
 - Textures photo et reliefs (ambientCG, CC0), ciels réels (Poly Haven, CC0), ombres du soleil, nuit avec fenêtres éclairées.
 - **Mode libre** : solo ou en ligne (un joueur héberge, les autres rejoignent par IP, port UDP 47777).
 - Circulation, piétons, police et niveau de recherche, courses de livraison payées en FCFA, cycle jour/nuit.

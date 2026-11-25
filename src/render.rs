@@ -280,6 +280,27 @@ pub fn draw_hud(p: &Painter, h: &Hud) {
         outlined(p, screen.center_top() + vec2(0.0, 120.0), Align2::CENTER_TOP, "LA POLICE T'ARRÊTE… fuis !", 24.0, Color32::from_rgb(255, 80, 80));
     }
 
+    // ---- weapon (left of the clock), crosshair
+    {
+        let (name, ..) = crate::game::WEAPONS[g.weapon];
+        let wr = Rect::from_min_size(tr + vec2(-330.0, -2.0), vec2(118.0, 74.0));
+        p.rect_filled(wr, 10.0, Color32::from_black_alpha(150));
+        p.rect_stroke(wr, 10.0, Stroke::new(1.5, Color32::from_white_alpha(90)), egui::StrokeKind::Inside);
+        weapon_icon(p, wr.center() - vec2(0.0, 8.0), g.weapon);
+        let ammo = if g.weapon == 0 { name.to_string() } else { format!("{} · {}", name, g.ammo[g.weapon]) };
+        outlined(p, wr.center_bottom() + vec2(0.0, -4.0), Align2::CENTER_BOTTOM, &ammo, 12.0, Color32::WHITE);
+        outlined(p, wr.center_bottom() + vec2(0.0, 6.0), Align2::CENTER_TOP, "1/2/3 · Tab", 10.0, Color32::from_white_alpha(160));
+    }
+    if g.aiming {
+        let c = screen.center();
+        let col = Color32::from_rgb(255, 255, 255);
+        for d in [vec2(1.0, 0.0), vec2(-1.0, 0.0), vec2(0.0, 1.0), vec2(0.0, -1.0)] {
+            p.line_segment([c + d * 5.0, c + d * 14.0], Stroke::new(2.5, Color32::from_black_alpha(160)));
+            p.line_segment([c + d * 5.0, c + d * 14.0], Stroke::new(1.5, col));
+        }
+        p.circle_filled(c, 1.8, Color32::from_rgb(255, 80, 60));
+    }
+
     // ---- objective
     let obj: Option<(String, Option<Pos2>)> = match h.objective {
         Some((t, p)) => Some((t.to_string(), p)),
@@ -343,52 +364,174 @@ pub fn draw_hud(p: &Painter, h: &Hud) {
     p.text(screen.right_bottom() + vec2(-8.0, -4.0), Align2::RIGHT_BOTTOM, "Carte © OpenStreetMap · textures ambientCG · ciel Poly Haven", FontId::proportional(10.0), Color32::from_white_alpha(140));
 }
 
+fn weapon_icon(p: &Painter, c: Pos2, w: usize) {
+    let col = Color32::from_rgb(235, 235, 235);
+    let dark = Color32::from_rgb(40, 40, 44);
+    match w {
+        0 => {
+            // fist
+            p.circle_filled(c, 15.0, col);
+            for k in 0..4 {
+                p.circle_filled(c + vec2(-10.5 + k as f32 * 7.0, -10.0), 4.2, col);
+            }
+            p.line_segment([c + vec2(-8.0, -4.0), c + vec2(8.0, -4.0)], Stroke::new(1.2, dark));
+        }
+        1 => {
+            // pistol
+            p.rect_filled(Rect::from_min_size(c + vec2(-22.0, -12.0), vec2(44.0, 11.0)), 2.0, col);
+            p.add(Shape::convex_polygon(vec![c + vec2(6.0, -2.0), c + vec2(18.0, -2.0), c + vec2(22.0, 16.0), c + vec2(10.0, 16.0)], col, Stroke::NONE));
+            p.circle_stroke(c + vec2(4.0, 4.0), 4.0, Stroke::new(2.0, col));
+        }
+        _ => {
+            // assault rifle
+            p.rect_filled(Rect::from_min_size(c + vec2(-40.0, -9.0), vec2(62.0, 9.0)), 2.0, col);
+            p.rect_filled(Rect::from_min_size(c + vec2(22.0, -7.0), vec2(18.0, 4.0)), 1.0, col);
+            p.add(Shape::convex_polygon(vec![c + vec2(-40.0, -9.0), c + vec2(-30.0, -9.0), c + vec2(-30.0, 8.0), c + vec2(-44.0, 10.0)], col, Stroke::NONE));
+            p.add(Shape::convex_polygon(vec![c + vec2(-2.0, 0.0), c + vec2(6.0, 0.0), c + vec2(10.0, 16.0), c + vec2(3.0, 17.0)], col, Stroke::NONE));
+            p.rect_filled(Rect::from_min_size(c + vec2(-22.0, 0.0), vec2(7.0, 12.0)), 1.0, col);
+        }
+    }
+}
+
+/// Clip segment a-b to the circle (c, r).
+fn clip_circle(a: Pos2, b: Pos2, c: Pos2, r: f32) -> Option<(Pos2, Pos2)> {
+    let d = b - a;
+    let f = a - c;
+    let qa = d.dot(d);
+    if qa < 1e-6 {
+        return None;
+    }
+    let qb = 2.0 * f.dot(d);
+    let qc = f.dot(f) - r * r;
+    let disc = qb * qb - 4.0 * qa * qc;
+    if disc < 0.0 {
+        return None;
+    }
+    let sq = disc.sqrt();
+    let t0 = ((-qb - sq) / (2.0 * qa)).max(0.0);
+    let t1 = ((-qb + sq) / (2.0 * qa)).min(1.0);
+    if t0 >= t1 {
+        return None;
+    }
+    Some((a + d * t0, a + d * t1))
+}
+
+/// Round radar that turns with the camera, bottom left.
 fn draw_minimap(p: &Painter, h: &Hud) {
     let g = h.g;
-    let size = 250.0;
-    let r = Rect::from_min_size(h.screen.left_bottom() + vec2(18.0, -size - 22.0), vec2(size, size));
-    p.rect_filled(r.expand(4.0), 14.0, Color32::from_black_alpha(170));
+    let rad = 120.0;
+    let c = h.screen.left_bottom() + vec2(24.0 + rad, -30.0 - rad);
     let pp = g.player_pos();
-    let cam = Cam { center: pp, scale: size / 1400.0, screen: r };
-    let clip = p.with_clip_rect(r);
-    clip.rect_filled(r, 12.0, darken(GROUND, 0.75));
-    let (lo, hi) = cam.view();
-    draw_areas(&clip, h.map, &cam, lo, hi);
-    draw_roads(&clip, h.map, &cam, lo, hi, 0.6, 4..=4, false);
-    draw_roads(&clip, h.map, &cam, lo, hi, 1.6, 0..=3, false);
-    for (bp, owned) in h.biz {
-        let s = cam.w2s(*bp);
-        if !r.shrink(6.0).contains(s) {
+    let scale = rad / 650.0;
+    let th = -std::f32::consts::FRAC_PI_2 - h.cam_yaw;
+    let (cs, sn) = (th.cos(), th.sin());
+    let w2s = |q: Pos2| {
+        let v = (q - pp) * scale;
+        c + vec2(cs * v.x - sn * v.y, sn * v.x + cs * v.y)
+    };
+    let edge = |q: Pos2, m: f32| {
+        let s = w2s(q);
+        let d = s - c;
+        if d.length() > rad - m { c + d.normalized() * (rad - m) } else { s }
+    };
+    p.circle_filled(c, rad + 5.0, Color32::from_black_alpha(190));
+    p.circle_filled(c, rad, Color32::from_rgb(118, 104, 84));
+    let view = 650.0 * 1.5;
+    let (lo, hi) = (pp - vec2(view, view), pp + vec2(view, view));
+    for a in &h.map.areas {
+        if a.max.x < lo.x || a.min.x > hi.x || a.max.y < lo.y || a.min.y > hi.y {
             continue;
         }
-        clip.circle_filled(s, 7.0, if *owned { Color32::from_rgb(40, 150, 60) } else { Color32::from_rgb(90, 230, 120) });
-        clip.text(s, Align2::CENTER_CENTER, "$", FontId::proportional(11.0), Color32::BLACK);
+        let col = match a.kind { 0 => Color32::from_rgb(70, 125, 160), 1 => Color32::from_rgb(100, 130, 70), _ => Color32::from_rgb(150, 140, 115) };
+        let mut mesh = Mesh::default();
+        for t in &a.tris {
+            let s = t.map(w2s);
+            if s.iter().all(|q| (*q - c).length() < rad) {
+                let i = mesh.vertices.len() as u32;
+                for q in s {
+                    mesh.colored_vertex(q, col);
+                }
+                mesh.add_triangle(i, i + 1, i + 2);
+            }
+        }
+        p.add(Shape::mesh(mesh));
+    }
+    for pass in 0..2 {
+        for r in &h.map.roads {
+            let main = r.kind <= 3;
+            if (pass == 0) == main || r.max.x < lo.x || r.min.x > hi.x || r.max.y < lo.y || r.min.y > hi.y {
+                continue;
+            }
+            let (w, col) = if main { (2.6, Color32::from_rgb(235, 232, 225)) } else { (1.1, Color32::from_rgb(170, 140, 110)) };
+            for s in r.pts.windows(2) {
+                if let Some((a, b)) = clip_circle(w2s(s[0]), w2s(s[1]), c, rad - 1.0) {
+                    p.line_segment([a, b], Stroke::new(w, col));
+                }
+            }
+        }
+    }
+    for (bp, owned) in h.biz {
+        let s = w2s(*bp);
+        if (s - c).length() < rad - 6.0 {
+            p.circle_filled(s, 7.0, if *owned { Color32::from_rgb(40, 150, 60) } else { Color32::from_rgb(90, 230, 120) });
+            p.text(s, Align2::CENTER_CENTER, "$", FontId::proportional(11.0), Color32::BLACK);
+        }
+    }
+    for sh in &g.shops {
+        let s = w2s(*sh);
+        if (s - c).length() < rad - 6.0 {
+            p.circle_filled(s, 7.0, Color32::from_rgb(220, 60, 50));
+            p.rect_filled(Rect::from_center_size(s, vec2(8.0, 3.0)), 0.0, Color32::WHITE);
+        }
     }
     for v in &g.vehicles {
-        if v.driver == Driver::Police {
-            clip.circle_filled(cam.w2s(v.pos), 3.5, if (g.time * 6.0) as i32 % 2 == 0 { Color32::RED } else { Color32::BLUE });
+        if v.driver == crate::game::Driver::Police || v.driver == crate::game::Driver::Gang {
+            let s = w2s(v.pos);
+            if (s - c).length() < rad - 4.0 {
+                let col = if v.driver == crate::game::Driver::Gang { Color32::from_rgb(255, 60, 40) } else if (g.time * 6.0) as i32 % 2 == 0 { Color32::RED } else { Color32::BLUE };
+                p.circle_filled(s, 4.0, col);
+            }
         }
     }
     if g.mission.is_none() && !g.story {
         for s in &g.spots {
-            clip.circle_filled(cam.w2s(*s), 3.5, Color32::from_rgb(255, 210, 0));
+            let q = w2s(*s);
+            if (q - c).length() < rad - 4.0 {
+                p.circle_filled(q, 4.0, Color32::from_rgb(255, 210, 0));
+            }
         }
     }
     for rm in h.remotes {
-        clip.circle_filled(cam.w2s(pos2(rm.x, rm.y)), 4.5, Color32::from_rgb(rm.color[0], rm.color[1], rm.color[2]));
+        p.circle_filled(edge(pos2(rm.x, rm.y), 6.0), 5.0, Color32::from_rgb(rm.color[0], rm.color[1], rm.color[2]));
     }
     let target = h.objective.and_then(|o| o.1).or(g.mission.as_ref().map(|m| m.to));
     if let Some(t) = target {
-        let s = cam.w2s(t).clamp(r.min + vec2(7.0, 7.0), r.max - vec2(7.0, 7.0));
-        clip.circle_filled(s, 6.0, Color32::from_rgb(60, 200, 255));
-        clip.circle_stroke(s, 6.0, Stroke::new(1.5, Color32::WHITE));
+        let s = edge(t, 8.0);
+        p.circle_filled(s, 7.0, Color32::from_rgb(60, 200, 255));
+        p.circle_stroke(s, 7.0, Stroke::new(1.5, Color32::WHITE));
     }
-    let f = vec2(g.player.angle.cos(), g.player.angle.sin());
-    let c = r.center();
+    // player arrow
+    let a = g.player.angle + th;
+    let f = vec2(a.cos(), a.sin());
     let rg = vec2(-f.y, f.x);
-    clip.add(Shape::convex_polygon(vec![c + f * 9.0, c - f * 6.0 + rg * 6.0, c - f * 6.0 - rg * 6.0], Color32::WHITE, Stroke::new(1.5, Color32::BLACK)));
-    p.rect_stroke(r, 12.0, Stroke::new(2.0, Color32::from_rgb(240, 190, 40)), egui::StrokeKind::Outside);
-    outlined(p, r.center_top() + vec2(0.0, 6.0), Align2::CENTER_TOP, "N", 13.0, Color32::WHITE);
+    p.add(Shape::convex_polygon(vec![c + f * 10.0, c - f * 6.0 + rg * 7.0, c - f * 3.0, c - f * 6.0 - rg * 7.0], Color32::WHITE, Stroke::new(1.5, Color32::BLACK)));
+    p.circle_stroke(c, rad, Stroke::new(3.0, Color32::from_rgb(30, 30, 30)));
+    // health / armour arcs under the radar, as in the classics
+    let hp = (g.player.health / 100.0).clamp(0.0, 1.0);
+    let arc = |from: f32, to: f32| -> Vec<Pos2> {
+        (0..=30).map(|i| {
+            let t = from + (to - from) * i as f32 / 30.0;
+            c + vec2(t.cos(), t.sin()) * (rad + 9.0)
+        }).collect()
+    };
+    let (a0, a1) = (std::f32::consts::PI * 0.62, std::f32::consts::PI * 0.38);
+    p.add(Shape::line(arc(a0, a1), Stroke::new(6.0, Color32::from_black_alpha(180))));
+    p.add(Shape::line(arc(a0, a0 + (a1 - a0) * hp.max(0.001)), Stroke::new(4.0, Color32::from_rgb(80, 210, 90))));
+    // north marker on the ring
+    let n = vec2(cs * 0.0 - sn * -1.0, sn * 0.0 + cs * -1.0);
+    let np = c + n * rad;
+    p.circle_filled(np, 10.0, Color32::from_black_alpha(220));
+    p.text(np, Align2::CENTER_CENTER, "N", FontId::proportional(13.0), Color32::WHITE);
 }
 
 pub fn draw_full_map(p: &Painter, map: &Map, g: &Game, screen: Rect, remotes: &[Remote]) {

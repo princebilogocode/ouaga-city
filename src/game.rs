@@ -121,6 +121,7 @@ pub struct Player {
     pub arrest_timer: f32,
     pub color: Color32,
     pub walk: f32,
+    pub moving: f32,
 }
 
 #[derive(Default, Clone, Copy)]
@@ -133,6 +134,27 @@ pub struct Input {
     pub sprint: bool,
     pub action: bool,
     pub horn: bool,
+    pub aim: bool,
+    pub fire: bool,
+    pub fire_held: bool,
+    pub aim_yaw: f32,
+    pub switch: Option<usize>,
+}
+
+/// Fists, pistol, assault rifle: (name, cooldown s, damage, range m, spread rad, automatic)
+pub const WEAPONS: [(&str, f32, f32, f32, f32, bool); 3] = [
+    ("Poings", 0.45, 60.0, 1.8, 0.0, false),
+    ("Pistolet", 0.32, 40.0, 70.0, 0.02, false),
+    ("Fusil d'assaut", 0.1, 30.0, 110.0, 0.035, true),
+];
+
+#[derive(Clone, Copy)]
+pub struct Fx {
+    /// 0 tracer, 1 muzzle flash, 2 impact, 3 blood
+    pub kind: u8,
+    pub a: Pos2,
+    pub b: Pos2,
+    pub t: f32,
 }
 
 pub struct Game {
@@ -150,6 +172,15 @@ pub struct Game {
     pub story: bool,
     pub ev_arrested: bool,
     pub ev_died: bool,
+    pub owned: [bool; 3],
+    pub ammo: [i32; 3],
+    pub weapon: usize,
+    pub fire_cd: f32,
+    pub aiming: bool,
+    pub aim_yaw: f32,
+    pub fx: Vec<Fx>,
+    pub enemy_cd: f32,
+    pub shops: Vec<Pos2>,
 }
 
 const CAR_COLORS: [Color32; 8] = [
@@ -215,6 +246,7 @@ impl Game {
                 arrest_timer: 0.0,
                 color,
                 walk: 0.0,
+                moving: 0.0,
             },
             hours: 10.0,
             messages: Vec::new(),
@@ -226,6 +258,19 @@ impl Game {
             story: false,
             ev_arrested: false,
             ev_died: false,
+            owned: [true, true, false],
+            ammo: [0, 48, 0],
+            weapon: 0,
+            fire_cd: 0.0,
+            aiming: false,
+            aim_yaw: 0.0,
+            fx: Vec::new(),
+            enemy_cd: 1.0,
+            shops: ["Marché de Larlé", "Marché Katr yaar", "Kalgodin Yare"]
+                .iter()
+                .filter_map(|n| map.poi_named(n))
+                .map(|p| map.road_point(p + vec2(25.0, 25.0)))
+                .collect(),
         };
         // the player starts on a moto, the city's favourite ride
         g.vehicles.push(Vehicle {
@@ -327,6 +372,165 @@ impl Game {
 
     pub fn tagged(&self, tag: u8) -> Option<usize> {
         self.vehicles.iter().position(|v| v.tag == tag && !v.remove)
+    }
+
+    /// Fire the current weapon along the aim (or facing) direction.
+    pub fn shoot(&mut self, map: &Map) {
+        if self.fire_cd > 0.0 {
+            return;
+        }
+        let (_, cd, dmg, range, spread, _) = WEAPONS[self.weapon];
+        if self.weapon > 0 && self.ammo[self.weapon] <= 0 {
+            self.msg("Plus de munitions ! (armurerie : marqueur rouge)");
+            self.fire_cd = 0.6;
+            return;
+        }
+        self.fire_cd = cd;
+        let yaw = if self.aiming { self.aim_yaw } else { self.player.angle } + self.rng.range(-spread, spread);
+        let dir = vec2(yaw.cos(), yaw.sin());
+        let origin = self.player.pos + dir * 0.4;
+        if self.weapon == 0 {
+            // a punch: the closest person in front
+            let hit = self.peds.iter().position(|p| p.down <= 0.0 && (p.pos - origin).length() < range && (p.pos - origin).normalized().dot(dir) > 0.5);
+            if let Some(i) = hit {
+                self.peds[i].down = 12.0;
+                self.fx.push(Fx { kind: 2, a: self.peds[i].pos, b: self.peds[i].pos, t: 0.2 });
+                self.msg("Coup de poing !");
+                if self.police_near(60.0) {
+                    self.add_wanted(1);
+                }
+            }
+            return;
+        }
+        self.ammo[self.weapon] -= 1;
+        let mut end = origin + dir * range;
+        let mut hit_ped: Option<usize> = None;
+        let mut hit_car: Option<usize> = None;
+        let mut t = 0.6;
+        'march: while t < range {
+            let p = origin + dir * t;
+            if map.point_in_building(p) {
+                end = p;
+                break;
+            }
+            for (i, pd) in self.peds.iter().enumerate() {
+                if pd.down <= 0.0 && (pd.pos - p).length() < 0.55 {
+                    hit_ped = Some(i);
+                    end = p;
+                    break 'march;
+                }
+            }
+            for (i, v) in self.vehicles.iter().enumerate() {
+                if Some(i) != self.player.vehicle && !v.remove && (v.pos - p).length() < v.kind.spec().1 + 0.7 {
+                    hit_car = Some(i);
+                    end = p;
+                    break 'march;
+                }
+            }
+            t += 0.7;
+        }
+        self.fx.push(Fx { kind: 0, a: origin, b: end, t: 0.07 });
+        self.fx.push(Fx { kind: 1, a: origin, b: origin + dir, t: 0.05 });
+        self.fx.push(Fx { kind: 2, a: end, b: end, t: 0.25 });
+        // gunfire scares the street
+        for p in &mut self.peds {
+            if p.down <= 0.0 && (p.pos - origin).length() < 40.0 {
+                p.flee = 4.0;
+            }
+        }
+        if let Some(i) = hit_ped {
+            self.peds[i].down = 30.0;
+            self.fx.push(Fx { kind: 3, a: self.peds[i].pos, b: self.peds[i].pos, t: 30.0 });
+            self.add_wanted(if self.police_near(80.0) { 2 } else { 1 });
+        } else if let Some(i) = hit_car {
+            let v = &mut self.vehicles[i];
+            v.health -= dmg * 0.5;
+            if v.driver == Driver::Police {
+                self.add_wanted(1);
+            } else if v.driver == Driver::Traffic {
+                // the driver jumps out and runs
+                v.driver = Driver::None;
+                v.vel = Vec2::ZERO;
+                let pos = v.pos + vec2(-v.angle.sin(), v.angle.cos()) * 2.0;
+                let road = v.route.map(|r| r.road).unwrap_or(0);
+                self.peds.push(Ped { pos, angle: 0.0, road, i: 0, dir: 1, side: 1.0, flee: 6.0, down: 0.0, color: CLOTHES[self.rng.below(8)], remove: false });
+            }
+            if self.police_near(80.0) && self.player.wanted == 0 {
+                self.add_wanted(1);
+            }
+        } else if self.police_near(50.0) && self.player.wanted == 0 {
+            self.add_wanted(1);
+        }
+    }
+
+    fn police_near(&self, r: f32) -> bool {
+        let pp = self.player_pos();
+        self.vehicles.iter().any(|v| v.driver == Driver::Police && !v.dead && (v.pos - pp).length() < r)
+    }
+
+    /// Police (from 2 stars) and gangsters shoot back.
+    fn enemy_fire(&mut self) {
+        if self.enemy_cd > 0.0 {
+            return;
+        }
+        self.enemy_cd = 0.8;
+        let pp = self.player_pos();
+        let shooters: Vec<Pos2> = self
+            .vehicles
+            .iter()
+            .filter(|v| !v.dead && ((v.driver == Driver::Police && self.player.wanted >= 2) || v.driver == Driver::Gang))
+            .filter(|v| (v.pos - pp).length() < 40.0)
+            .map(|v| v.pos)
+            .collect();
+        if shooters.is_empty() {
+            return;
+        }
+        let from = shooters[self.rng.below(shooters.len())];
+        let moving = self.player.vehicle.map_or(self.player.moving, |v| self.vehicles[v].speed().abs() / 10.0);
+        let chance = (0.45 - moving.min(1.5) * 0.18).max(0.12);
+        let hit = self.rng.f() < chance;
+        let miss = if hit { Vec2::ZERO } else { vec2(self.rng.range(-2.0, 2.0), self.rng.range(-2.0, 2.0)) };
+        self.fx.push(Fx { kind: 0, a: from, b: pp + miss, t: 0.07 });
+        self.fx.push(Fx { kind: 1, a: from, b: pp, t: 0.05 });
+        if hit {
+            self.player.health -= 6.0 + self.player.wanted as f32;
+            self.fx.push(Fx { kind: 2, a: pp, b: pp, t: 0.2 });
+        }
+    }
+
+    /// Buy at a gun shop: the pistol, the rifle or ammunition.
+    pub fn buy_at_shop(&mut self) -> String {
+        if !self.owned[1] {
+            if self.player.money < 15_000 {
+                return "Pistolet : 15 000 FCFA".into();
+            }
+            self.player.money -= 15_000;
+            self.owned[1] = true;
+            self.ammo[1] += 36;
+            return "Pistolet acheté (+36 balles)".into();
+        }
+        if !self.owned[2] {
+            if self.player.money < 120_000 {
+                if self.player.money >= 2_000 {
+                    self.player.money -= 2_000;
+                    self.ammo[1] += 36;
+                    return "+36 balles de pistolet (2 000 FCFA). Fusil d'assaut : 120 000 FCFA".into();
+                }
+                return "Il te faut 2 000 FCFA pour des munitions".into();
+            }
+            self.player.money -= 120_000;
+            self.owned[2] = true;
+            self.ammo[2] += 120;
+            self.weapon = 2;
+            return "Fusil d'assaut acheté (+120 balles)".into();
+        }
+        if self.player.money < 5_000 {
+            return "Munitions : 5 000 FCFA".into();
+        }
+        self.player.money -= 5_000;
+        self.ammo[1] += 36;
+        self.ammo[2] += 90;
+        "Munitions rechargées (5 000 FCFA)".into()
     }
 
     fn add_wanted(&mut self, n: u8) {
@@ -472,7 +676,29 @@ impl Game {
         }
 
         self.populate(map, false);
+        if let Some(w) = inp.switch {
+            if self.owned[w] {
+                self.weapon = w;
+            }
+        }
+        self.fire_cd -= dt;
+        self.enemy_cd -= dt;
+        for f in &mut self.fx {
+            f.t -= dt;
+        }
+        self.fx.retain(|f| f.t > 0.0);
+        self.aiming = inp.aim && self.player.vehicle.is_none();
+        self.aim_yaw = inp.aim_yaw;
+        if self.aiming {
+            self.player.angle = inp.aim_yaw;
+        }
         self.update_player(map, inp, dt);
+        let (_, cd, _, _, _, auto) = WEAPONS[self.weapon];
+        let _ = cd;
+        if self.player.vehicle.is_none() && (inp.fire || (auto && inp.fire_held && self.aiming)) {
+            self.shoot(map);
+        }
+        self.enemy_fire();
         self.update_traffic(map, dt);
         self.update_police(map, dt);
         self.update_peds(map, dt);
@@ -522,6 +748,8 @@ impl Game {
                 let d = vec2(self.player.angle.cos(), self.player.angle.sin()) * mv;
                 self.player.pos += d * sp * dt;
                 self.player.walk += mv.abs() * sp * dt;
+                let target = if mv != 0.0 { (sp / 4.0).min(1.3) } else { 0.0 };
+                self.player.moving += (target - self.player.moving) * (dt * 8.0).min(1.0);
                 map.collide(&mut self.player.pos, 0.4);
             }
         }

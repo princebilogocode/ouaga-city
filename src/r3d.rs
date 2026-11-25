@@ -7,6 +7,7 @@
 
 use crate::game::{Driver, Game, VKind};
 use crate::map::{triangulate, Map};
+use crate::models::{self, Inst, Models, M_BILA, M_JEUNE, M_MOTO, PEOPLE};
 use crate::net::Remote;
 use eframe::egui::{self as egui};
 use eframe::egui_glow;
@@ -979,6 +980,7 @@ pub struct FrameData {
     pub focus: Vec3,
     pub opaque: Vec<f32>,
     pub translucent: Vec<f32>,
+    pub insts: Vec<Inst>,
 }
 
 fn smooth(a: f32, b: f32, x: f32) -> f32 {
@@ -1030,26 +1032,38 @@ pub struct SceneInput<'a> {
     pub biz_markers: &'a [(Pos2, bool)],
 }
 
-pub fn build_scene(si: &SceneInput) -> (Vec<f32>, Vec<f32>) {
+fn person_model(seed: u32) -> usize {
+    PEOPLE[(seed.wrapping_mul(2654435761) >> 13) as usize % PEOPLE.len()]
+}
+
+fn at(p: Pos2, ang: f32) -> Mat4 {
+    Mat4::from_translation(v3(p, 0.0)) * Mat4::from_rotation_y(-ang)
+}
+
+pub fn build_scene(si: &SceneInput) -> (Vec<f32>, Vec<f32>, Vec<Inst>) {
     let g = si.game;
     let mut op = MeshBuilder::default();
     let mut tr = MeshBuilder::default();
+    let mut insts: Vec<Inst> = Vec::new();
     let near = |p: Pos2| (p - si.cam).length() < 320.0;
     let flash = (g.time * 6.0) as i32 % 2 == 0;
-    let bila = bila_look(si.bila_suit);
+    let white = [1.0, 1.0, 1.0];
     for (i, v) in g.vehicles.iter().enumerate() {
         if !near(v.pos) {
             continue;
         }
-        let rider_look;
-        let rider = if v.kind == VKind::Moto && v.driver != Driver::None && !v.dead {
-            rider_look = if g.player.vehicle == Some(i) { bila } else { ped_look(i as u32 * 7 + 3) };
-            Some(&rider_look)
+        if v.kind == VKind::Moto {
+            let base = at(v.pos, v.angle);
+            insts.push(Inst { model: M_MOTO, mat: base, phase: 0.0, moving: 0.0, seated: false, tint: if v.dead { [0.25, 0.22, 0.2] } else { white }, aim: false });
+            if v.driver != Driver::None && !v.dead {
+                let who = if g.player.vehicle == Some(i) { M_BILA } else { person_model(i as u32 * 7 + 3) };
+                let rider = base * Mat4::from_translation(Vec3::new(-0.22, -0.16, 0.0));
+                insts.push(Inst { model: who, mat: rider, phase: 0.0, moving: 0.0, seated: true, tint: white, aim: false });
+            }
         } else {
-            None
-        };
-        let spin = g.time * v.speed() / 0.33;
-        vehicle(&mut op, v.pos, v.angle, v.kind, v.color, v.dead, flash, rider, spin);
+            let spin = g.time * v.speed() / 0.33;
+            vehicle(&mut op, v.pos, v.angle, v.kind, v.color, v.dead, flash, None, spin);
+        }
         if v.dead {
             let fl = (g.time * 13.0 + i as f32).sin() * 0.3 + 1.0;
             tr.cuboid(&Mat4::from_translation(v3(v.pos, 1.6 * fl)), Vec3::new(0.5, 0.6 * fl, 0.5), [1.0, 0.5, 0.1, 0.6], L_EMISSIVE);
@@ -1064,15 +1078,15 @@ pub fn build_scene(si: &SceneInput) -> (Vec<f32>, Vec<f32>) {
         if !near(p.pos) {
             continue;
         }
-        let look = ped_look(i as u32 * 13 + p.color.r() as u32 * 7 + p.color.g() as u32);
+        let model = person_model(i as u32 * 13 + p.color.r() as u32 * 7 + p.color.g() as u32);
         if p.down > 0.0 {
-            let base = Mat4::from_translation(v3(p.pos, 0.14)) * Mat4::from_rotation_y(-p.angle) * Mat4::from_rotation_z(-FRAC_PI_2);
-            humanoid(&mut op, base, &look, 0.0, 0.0, Pose::Stand);
+            let m = Mat4::from_translation(v3(p.pos, 0.18)) * Mat4::from_rotation_y(-p.angle) * Mat4::from_rotation_z(-FRAC_PI_2);
+            insts.push(Inst { model, mat: m, phase: 0.0, moving: 0.0, seated: false, tint: white, aim: false });
             continue;
         }
-        let moving = if p.flee > 0.0 { 1.0 } else { 0.75 };
-        let phase = g.time * if p.flee > 0.0 { 10.0 } else { 6.0 } + i as f32;
-        humanoid(&mut op, Mat4::from_translation(v3(p.pos, 0.0)) * Mat4::from_rotation_y(-p.angle), &look, phase, moving, Pose::Stand);
+        let moving = if p.flee > 0.0 { 1.0 } else { 0.7 };
+        let phase = g.time * if p.flee > 0.0 { 10.0 } else { 5.5 } + i as f32;
+        insts.push(Inst { model, mat: at(p.pos, p.angle), phase, moving, seated: false, tint: white, aim: false });
     }
     for r in si.remotes {
         let pos = Pos2::new(r.x, r.y);
@@ -1080,17 +1094,69 @@ pub fn build_scene(si: &SceneInput) -> (Vec<f32>, Vec<f32>) {
             continue;
         }
         let c = Color32::from_rgb(r.color[0], r.color[1], r.color[2]);
-        let look = Look { top: rgba(c, 1.0), ..bila_look(false) };
         if r.kind == 0 {
-            humanoid(&mut op, Mat4::from_translation(v3(pos, 0.0)) * Mat4::from_rotation_y(-r.angle), &look, g.time * 6.0, 0.6, Pose::Stand);
+            insts.push(Inst { model: M_JEUNE, mat: at(pos, r.angle), phase: g.time * 6.0, moving: 0.6, seated: false, tint: white, aim: false });
+        } else if VKind::from_net(r.kind) == VKind::Moto {
+            insts.push(Inst { model: M_MOTO, mat: at(pos, r.angle), phase: 0.0, moving: 0.0, seated: false, tint: white, aim: false });
+            insts.push(Inst { model: M_JEUNE, mat: at(pos, r.angle) * Mat4::from_translation(Vec3::new(-0.22, -0.16, 0.0)), phase: 0.0, moving: 0.0, seated: true, tint: white, aim: false });
         } else {
-            vehicle(&mut op, pos, r.angle, VKind::from_net(r.kind), c, false, flash, Some(&look), g.time * 20.0);
+            vehicle(&mut op, pos, r.angle, VKind::from_net(r.kind), c, false, flash, None, g.time * 20.0);
         }
         op.cuboid(&Mat4::from_translation(v3(pos, 3.2)), Vec3::new(0.2, 0.2, 0.2), rgba(c, 1.0), L_EMISSIVE);
     }
     if g.player.vehicle.is_none() {
-        let p = g.player.pos;
-        humanoid(&mut op, Mat4::from_translation(v3(p, 0.0)) * Mat4::from_rotation_y(-g.player.angle), &bila, g.player.walk * 2.2, 1.0, Pose::Stand);
+        let base = at(g.player.pos, g.player.angle);
+        insts.push(Inst { model: M_BILA, mat: base, phase: g.player.walk * 2.4, moving: g.player.moving, seated: false, tint: white, aim: g.aiming && g.weapon > 0 });
+        // the weapon in Bila's right hand
+        let metal = rgb(38, 38, 42);
+        if g.weapon > 0 {
+            let len = if g.weapon == 2 { 0.42 } else { 0.11 };
+            let m = if g.aiming {
+                base * Mat4::from_translation(Vec3::new(0.62 + len * 0.6, 1.4, 0.16))
+            } else {
+                base * Mat4::from_translation(Vec3::new(0.05, 0.82 - len * 0.3, 0.24)) * Mat4::from_rotation_z(-1.35)
+            };
+            op.cuboid(&m, Vec3::new(len, 0.035, 0.022), metal, L_PLAIN);
+            op.cuboid(&(m * Mat4::from_translation(Vec3::new(-len * 0.6, -0.07, 0.0)) * Mat4::from_rotation_z(-0.25)), Vec3::new(0.03, 0.06, 0.02), metal, L_PLAIN);
+            if g.weapon == 2 {
+                op.cuboid(&(m * Mat4::from_translation(Vec3::new(-len * 0.2, -0.08, 0.0)) * Mat4::from_rotation_z(0.3)), Vec3::new(0.025, 0.07, 0.02), rgb(70, 45, 25), L_PLAIN);
+                op.cuboid(&(m * Mat4::from_translation(Vec3::new(-len * 1.1, -0.02, 0.0))), Vec3::new(0.12, 0.045, 0.025), rgb(70, 45, 25), L_PLAIN);
+            }
+        }
+    }
+    // gunfire effects
+    for fx in &g.fx {
+        match fx.kind {
+            0 => {
+                let d = fx.b - fx.a;
+                let len = d.length().max(0.1);
+                let ang = d.y.atan2(d.x);
+                let mid = fx.a + d * 0.5;
+                let m = Mat4::from_translation(v3(mid, 1.38)) * Mat4::from_rotation_y(-ang);
+                tr.cuboid(&m, Vec3::new(len * 0.5, 0.012, 0.012), [1.0, 0.9, 0.5, 0.75], L_EMISSIVE);
+            }
+            1 => {
+                let d = (fx.b - fx.a).normalized();
+                let m = Mat4::from_translation(v3(fx.a + d * 0.75, 1.4)) * Mat4::from_rotation_y(fx.t * 90.0);
+                tr.cuboid(&m, Vec3::new(0.14, 0.09, 0.09), [1.0, 0.75, 0.25, 0.9], L_EMISSIVE);
+            }
+            2 => {
+                let m = Mat4::from_translation(v3(fx.a, 1.0)) * Mat4::from_rotation_y(fx.t * 30.0);
+                tr.cuboid(&m, Vec3::splat(0.08 + (0.25 - fx.t) * 0.6), [0.75, 0.7, 0.62, 0.55], L_EMISSIVE);
+            }
+            _ => {
+                tr.ground_rect(fx.a, 0.21, 0.6, 0.7, 0.5, [0.32, 0.02, 0.02, 0.8 * (fx.t / 30.0).min(1.0)], L_EMISSIVE);
+            }
+        }
+    }
+    // gun shops
+    for s in &g.shops {
+        if near(*s) {
+            tr.cylinder(v3(*s, 0.0), 2.5, 2.5, 2.5, 20, [1.0, 0.25, 0.2, 0.25], L_EMISSIVE, false);
+            let m = Mat4::from_translation(v3(*s, 3.2 + (g.time * 3.0).sin() * 0.2)) * Mat4::from_rotation_y(g.time);
+            op.cuboid(&m, Vec3::new(0.45, 0.12, 0.08), [1.0, 0.3, 0.25, 1.0], L_EMISSIVE);
+            op.cuboid(&(m * Mat4::from_translation(Vec3::new(0.25, -0.2, 0.0))), Vec3::new(0.1, 0.2, 0.07), [1.0, 0.3, 0.25, 1.0], L_EMISSIVE);
+        }
     }
     let pulse = (g.time * 3.0).sin() * 0.5 + 0.5;
     if let Some(t) = si.marker {
@@ -1114,7 +1180,7 @@ pub fn build_scene(si: &SceneInput) -> (Vec<f32>, Vec<f32>) {
             op.cuboid(&m, Vec3::new(0.5, 0.5, 0.08), [0.3, 1.0, 0.45, 1.0], L_EMISSIVE);
         }
     }
-    (op.v, tr.v)
+    (op.v, tr.v, insts)
 }
 
 // ---------------------------------------------------------------- GL side
@@ -1138,6 +1204,7 @@ pub struct R3D {
     dynamic: Gpu,
     trans: Gpu,
     map: Arc<Map>,
+    models: Models,
 }
 
 const VS: &str = r#"
@@ -1389,7 +1456,8 @@ impl R3D {
             if status != glow::FRAMEBUFFER_COMPLETE {
                 return Err(format!("framebuffer des ombres incomplet ({status:#x})"));
             }
-            Ok(R3D { prog, shadow_prog, sky_prog, tex, nrm, sky, shadow_tex, shadow_fb, chunks: HashMap::new(), dynamic: make_gpu(gl), trans: make_gpu(gl), map })
+            let models = Models::new(gl, |vs, fs| compile(gl, vs, fs))?;
+            Ok(R3D { prog, shadow_prog, sky_prog, tex, nrm, sky, shadow_tex, shadow_fb, chunks: HashMap::new(), dynamic: make_gpu(gl), trans: make_gpu(gl), map, models })
         }
     }
 
@@ -1452,6 +1520,18 @@ impl R3D {
                 gl.bind_vertex_array(Some(self.dynamic.vao));
                 gl.draw_arrays(glow::TRIANGLES, 0, self.dynamic.count);
             }
+            let mf = models::Frame {
+                vp: &fd.light_vp,
+                lvp: &fd.light_vp,
+                cam: fd.cam,
+                sun: fd.sun,
+                sun_col: fd.sun_col,
+                ambient: fd.ambient,
+                fog_col: fd.sky,
+                fog: fd.fog,
+                texel: 1.0 / SHADOW_SIZE as f32,
+            };
+            self.models.draw(gl, &mf, &fd.insts, true, self.shadow_tex);
             gl.disable(glow::POLYGON_OFFSET_FILL);
             gl.bind_framebuffer(glow::FRAMEBUFFER, None);
 
@@ -1512,6 +1592,19 @@ impl R3D {
             }
             gl.bind_vertex_array(Some(self.dynamic.vao));
             gl.draw_arrays(glow::TRIANGLES, 0, self.dynamic.count);
+
+            let mf = models::Frame {
+                vp: &fd.view_proj,
+                lvp: &fd.light_vp,
+                cam: fd.cam,
+                sun: fd.sun,
+                sun_col: fd.sun_col,
+                ambient: fd.ambient,
+                fog_col: fd.sky,
+                fog: fd.fog,
+                texel: 1.0 / SHADOW_SIZE as f32,
+            };
+            self.models.draw(gl, &mf, &fd.insts, false, self.shadow_tex);
 
             gl.enable(glow::BLEND);
             gl.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);

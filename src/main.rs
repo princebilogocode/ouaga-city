@@ -4,6 +4,7 @@
 mod empire;
 mod game;
 mod map;
+mod models;
 mod net;
 mod r3d;
 mod render;
@@ -51,6 +52,8 @@ struct App {
     dist_mul: f32,
     high_cam: bool,
     cam_pos: Option<Vec3>,
+    aim_yaw: f32,
+    was_aiming: bool,
     bila_face: Option<egui::TextureHandle>,
     bila_full: Option<egui::TextureHandle>,
     menu_sky: Option<egui::TextureHandle>,
@@ -105,6 +108,8 @@ impl App {
             dist_mul: 1.0,
             high_cam: false,
             cam_pos: None,
+            aim_yaw: 0.0,
+            was_aiming: false,
             bila_face: None,
             bila_full: None,
             menu_sky: None,
@@ -254,7 +259,7 @@ impl App {
             });
     }
 
-    fn read_input(&self, ctx: &egui::Context) -> (Input, [bool; 5], f32, f32, bool) {
+    fn read_input(&self, ctx: &egui::Context) -> (Input, [bool; 6], f32, f32, bool, f32) {
         ctx.input(|i| {
             let k = |a: Key, b: Key, c: Key| i.key_down(a) || i.key_down(b) || i.key_down(c);
             let inp = Input {
@@ -266,11 +271,26 @@ impl App {
                 sprint: i.modifiers.shift,
                 action: i.key_pressed(Key::F),
                 horn: i.key_down(Key::H),
+                aim: i.pointer.secondary_down() || i.key_down(Key::V),
+                fire: (i.pointer.secondary_down() && i.pointer.primary_pressed()) || i.key_pressed(Key::X) || (!i.pointer.secondary_down() && i.pointer.primary_clicked()),
+                fire_held: (i.pointer.secondary_down() && i.pointer.primary_down()) || i.key_down(Key::X),
+                aim_yaw: 0.0,
+                switch: if i.key_pressed(Key::Num1) {
+                    Some(0)
+                } else if i.key_pressed(Key::Num2) {
+                    Some(1)
+                } else if i.key_pressed(Key::Num3) {
+                    Some(2)
+                } else {
+                    None
+                },
             };
-            let drag = if i.pointer.primary_down() || i.pointer.secondary_down() { i.pointer.delta().x } else { 0.0 };
+            let aiming = i.pointer.secondary_down() || i.key_down(Key::V);
+            let drag = if i.pointer.primary_down() && !aiming { i.pointer.delta().x } else { 0.0 };
+            let aim_dx = if aiming { i.pointer.delta().x } else { 0.0 };
             let advance = i.key_pressed(Key::Enter) || i.key_pressed(Key::Space) || i.pointer.primary_clicked();
-            let keys = [i.key_pressed(Key::M), i.key_pressed(Key::Escape), i.key_pressed(Key::C), i.key_pressed(Key::E), i.key_pressed(Key::B)];
-            (inp, keys, i.smooth_scroll_delta.y, drag, advance)
+            let keys = [i.key_pressed(Key::M), i.key_pressed(Key::Escape), i.key_pressed(Key::C), i.key_pressed(Key::E), i.key_pressed(Key::B), i.key_pressed(Key::Tab)];
+            (inp, keys, i.smooth_scroll_delta.y, drag, advance, aim_dx)
         })
     }
 
@@ -278,9 +298,13 @@ impl App {
         let ctx = ui.ctx().clone();
         let screen = ui.max_rect();
         let dt = if self.shot.is_some() { 1.0 / 60.0 } else { ctx.input(|i| i.stable_dt).min(0.05) };
-        let (mut inp, [map_key, esc, cam_key, buy_key, emp_key], scroll, drag, advance) = self.read_input(&ctx);
+        let (mut inp, [map_key, esc, cam_key, buy_key, emp_key, tab_key], scroll, drag, advance, aim_dx) = self.read_input(&ctx);
         if self.shot.is_some() {
-            inp = Input { up: self.frame > 10 && self.story.is_none(), ..Default::default() };
+            if std::env::args().any(|a| a == "--aim") {
+                inp = Input { action: self.frame == 3, aim: self.frame > 20 && std::env::var("OC_NOAIM").is_err(), fire: std::env::var("OC_FIRE").is_ok() && self.frame > 60 && self.frame % 12 == 0, switch: if self.frame == 5 && std::env::var("OC_W0").is_err() { Some(1) } else { None }, ..Default::default() };
+            } else {
+                inp = Input { up: self.frame > 10 && self.story.is_none(), ..Default::default() };
+            }
         }
         if map_key {
             self.show_map = !self.show_map;
@@ -298,6 +322,27 @@ impl App {
         let map = self.map.clone();
         let game = self.game.as_mut().unwrap();
         let empire = self.empire.as_mut().unwrap();
+        if tab_key {
+            let mut w = game.weapon;
+            for _ in 0..3 {
+                w = (w + 1) % 3;
+                if game.owned[w] {
+                    break;
+                }
+            }
+            inp.switch = Some(w);
+        }
+        if inp.aim && game.player.vehicle.is_none() {
+            if !self.was_aiming {
+                self.aim_yaw = self.cam_yaw + self.orbit;
+                self.orbit = 0.0;
+            }
+            self.aim_yaw += aim_dx * 0.006 + (inp.right as i32 - inp.left as i32) as f32 * 1.8 * dt;
+            inp.left = false;
+            inp.right = false;
+        }
+        self.was_aiming = inp.aim && game.player.vehicle.is_none();
+        inp.aim_yaw = self.aim_yaw;
 
         let in_dialog = self.story.as_ref().is_some_and(|s| s.in_dialog);
         if in_dialog {
@@ -335,6 +380,15 @@ impl App {
                 }
             }
         }
+        if prompt.is_none() {
+            if let Some(_) = game.shops.iter().find(|s| (**s - pp).length() < 9.0) {
+                prompt = Some("E : armurerie — pistolet 15 000 · munitions 2 000 · fusil d'assaut 120 000 FCFA".into());
+                if buy_key {
+                    let m = game.buy_at_shop();
+                    game.msg(m);
+                }
+            }
+        }
         let worth = empire.net_worth(game.player.money);
         let income = empire.income();
         let biz: Vec<(Pos2, bool)> = empire.list.iter().map(|b| (b.place, b.owned)).collect();
@@ -357,8 +411,13 @@ impl App {
         }
         let in_vehicle = game.player.vehicle.is_some();
         self.cam_yaw += d * (dt * if in_vehicle { 3.0 } else { 4.0 }).min(1.0);
+        if game.aiming {
+            self.cam_yaw = self.aim_yaw;
+            self.orbit = 0.0;
+        }
         let yaw = self.cam_yaw + self.orbit;
         let fwd = Vec3::new(yaw.cos(), 0.0, yaw.sin());
+        let right = Vec3::new(-yaw.sin(), 0.0, yaw.cos());
         let (dist, height) = if self.high_cam {
             (24.0, 22.0)
         } else if in_vehicle {
@@ -367,7 +426,11 @@ impl App {
             (4.2, 1.9)
         };
         let focus = Vec3::new(pp.x, if in_vehicle { 1.3 } else { 1.55 }, pp.y);
-        let mut eye = focus - fwd * dist * self.dist_mul + Vec3::Y * height * self.dist_mul.sqrt();
+        let mut eye = if game.aiming {
+            focus - fwd * 2.6 + right * 0.6 + Vec3::Y * 0.25
+        } else {
+            focus - fwd * dist * self.dist_mul + Vec3::Y * height * self.dist_mul.sqrt()
+        };
         eye.y = eye.y.max(0.6);
         // keep the camera out of the walls
         let mut reach = 1.0;
@@ -379,15 +442,34 @@ impl App {
                 break;
             }
         }
-        let eye_target = focus + (eye - focus) * reach;
+        let mut eye_target = focus + (eye - focus) * reach;
+        // keep a margin from the walls too (shoulder camera)
+        let mut e2 = Pos2::new(eye_target.x, eye_target.z);
+        if map.collide(&mut e2, 0.8).is_some() {
+            eye_target.x = e2.x;
+            eye_target.z = e2.y;
+        }
+        // and out of the vehicles around (a parked minibus behind Bila...)
+        for (vi, v) in game.vehicles.iter().enumerate() {
+            if Some(vi) == game.player.vehicle {
+                continue;
+            }
+            let r = v.kind.spec().0 + 0.6;
+            let d = Pos2::new(eye_target.x, eye_target.z) - v.pos;
+            if d.length() < r && eye_target.y < 2.6 {
+                let n = if d.length() > 1e-3 { d.normalized() } else { egui::vec2(1.0, 0.0) };
+                eye_target.x = v.pos.x + n.x * r;
+                eye_target.z = v.pos.y + n.y * r;
+            }
+        }
         let blocked = reach < 1.0;
         let eye = eye_target;
         let eye = match self.cam_pos {
-            Some(prev) if prev.distance(eye) < 40.0 && !blocked => prev.lerp(eye, (dt * 8.0).min(1.0)),
+            Some(prev) if prev.distance(eye) < 40.0 && !blocked => prev.lerp(eye, (dt * if game.aiming { 18.0 } else { 8.0 }).min(1.0)),
             _ => eye,
         };
         self.cam_pos = Some(eye);
-        let look = focus + fwd * 3.0;
+        let look = if game.aiming { focus + fwd * 25.0 + right * 0.6 } else { focus + fwd * 3.0 };
         let aspect = screen.width() / screen.height().max(1.0);
         let proj = Mat4::perspective_rh_gl(60f32.to_radians(), aspect, 0.2, 1600.0);
         let view = Mat4::look_at_rh(eye, look, Vec3::Y);
@@ -418,7 +500,7 @@ impl App {
         let marker = if chase_tag.is_some() { None } else { story_target };
         let night = render::night_factor(game.hours);
         let light = r3d::lighting(game.hours);
-        let (opaque, translucent) = r3d::build_scene(&r3d::SceneInput {
+        let (opaque, translucent, insts) = r3d::build_scene(&r3d::SceneInput {
             game,
             remotes: &remotes,
             cam: Pos2::new(eye.x, eye.z),
@@ -441,6 +523,7 @@ impl App {
             focus,
             opaque,
             translucent,
+            insts,
         };
 
         let p = ui.painter().clone();
@@ -521,14 +604,15 @@ impl App {
                 "",
                 "ZQSD / WASD / flèches : marcher (tourner + avancer) ou conduire",
                 "F : monter / descendre d'un véhicule (voler = recherché !)",
-                "E : acheter une entreprise · B : ton empire",
+                "E : acheter une entreprise ou à l'armurerie (marqueur rouge) · B : ton empire",
+                "Clic droit (ou V) : viser · clic gauche (ou X) : tirer / frapper · 1/2/3 ou Tab : changer d'arme",
                 "Espace : frein à main · Maj : courir · H : klaxon",
                 "Souris (glisser) : caméra · molette : distance · C : caméra haute · M : carte",
                 "Cercles jaunes (marchés) : courses de taxi-moto payées en FCFA",
                 "Stations-service : réparation à l'arrêt (500 FCFA)",
             ];
             for (i, l) in lines.iter().enumerate() {
-                p.text(screen.center() + vec2(0.0, -120.0 + i as f32 * 26.0), Align2::CENTER_CENTER, l, FontId::proportional(if i == 0 { 26.0 } else { 17.0 }), Color32::WHITE);
+                p.text(screen.center() + vec2(0.0, -150.0 + i as f32 * 26.0), Align2::CENTER_CENTER, l, FontId::proportional(if i == 0 { 26.0 } else { 17.0 }), Color32::WHITE);
             }
             let r = Rect::from_center_size(screen.center() + vec2(0.0, 150.0), vec2(220.0, 36.0));
             if ui.put(r, egui::Button::new("Retour au menu")).clicked() {
