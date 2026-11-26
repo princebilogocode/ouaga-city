@@ -24,7 +24,7 @@ use std::sync::{Arc, Mutex};
 pub const FLOATS: usize = 13;
 const CHUNK: f32 = 400.0;
 const TEX: usize = 512;
-const LAYERS: usize = 20;
+const LAYERS: usize = 21;
 const SHADOW_SIZE: i32 = 2048;
 const SHADOW_HALF: f32 = 150.0;
 
@@ -44,8 +44,10 @@ pub const L_BARK: f32 = 12.0;
 pub const L_THATCH: f32 = 13.0;
 pub const L_WAX1: f32 = 14.0;
 pub const L_WAX2: f32 = 15.0;
-pub const L_EMISSIVE: f32 = 20.0;
-pub const L_SHADOW: f32 = 21.0;
+pub const L_EMISSIVE: f32 = 30.0;
+pub const L_SHADOW: f32 = 31.0;
+/// plaster without painted windows (the windows are 3D kit pieces near the camera)
+pub const L_PLASTER: f32 = 20.0;
 
 pub fn rgba(c: Color32, a: f32) -> [f32; 4] {
     [c.r() as f32 / 255.0, c.g() as f32 / 255.0, c.b() as f32 / 255.0, a]
@@ -321,6 +323,7 @@ fn build_textures() -> (Vec<u8>, Vec<u8>) {
         (17, photo!("carrelage")),
         (18, photo!("tissu")),
         (19, photo!("bois")),
+        (20, photo!("mur")),
     ];
     let mut color = vec![0u8; TEX * TEX * 4 * LAYERS];
     let mut normal = vec![0u8; TEX * TEX * 4 * LAYERS];
@@ -656,6 +659,27 @@ pub fn build_chunk(map: &Map, cx: i32, cz: i32) -> Vec<f32> {
                 let p0 = c + egui::vec2(a0.cos(), a0.sin()) * hw;
                 let p1 = c + egui::vec2(a1.cos(), a1.sin()) * hw;
                 mb.tri([v3(c, y - 0.004), v3(p0, y - 0.004), v3(p1, y - 0.004)], tint, [[c.x / sc, c.y / sc], [p0.x / sc, p0.y / sc], [p1.x / sc, p1.y / sc]], layer);
+            }
+        }
+        // courtyard walls along the residential streets (gates are Blender pieces near the camera)
+        for w in crate::kit::walls_for_segment(map, ri as usize, si as usize) {
+            let t = w.b - w.a;
+            let len = t.length();
+            let ang = t.y.atan2(t.x);
+            let col = [w.tint[0], w.tint[1], w.tint[2], 1.0];
+            let segs: Vec<(f32, f32)> = if w.gate { vec![(0.0, len / 2.0 - 1.75), (len / 2.0 + 1.75, len)] } else { vec![(0.0, len)] };
+            for (s0, s1) in segs {
+                if s1 - s0 < 0.2 {
+                    continue;
+                }
+                let c = w.a + t / len * ((s0 + s1) / 2.0);
+                let m = Mat4::from_translation(v3(c, 1.0)) * Mat4::from_rotation_y(-ang);
+                mb.cuboid_uv(&m, Vec3::new((s1 - s0) / 2.0, 1.0, 0.1), col, L_PLASTER, 3.2);
+                let cap = Mat4::from_translation(v3(c, 2.04)) * Mat4::from_rotation_y(-ang);
+                mb.cuboid(&cap, Vec3::new((s1 - s0) / 2.0 + 0.02, 0.05, 0.14), darker(col, 0.8), L_CONCRETE);
+                // red laterite dust at the foot of the wall
+                let dust = Mat4::from_translation(v3(c + w.out * 0.11, 0.16)) * Mat4::from_rotation_y(-ang);
+                mb.cuboid(&dust, Vec3::new((s1 - s0) / 2.0, 0.16, 0.005), rgb(150, 90, 60), L_PLASTER);
             }
         }
         if road.kind <= 3 {
@@ -1339,6 +1363,8 @@ pub struct R3D {
     skinned: Skinned,
     vehicles: Vec<Gpu>,
     rooms: Vec<Gpu>,
+    detail: Gpu,
+    detail_at: Option<Pos2>,
 }
 
 const VS: &str = r#"
@@ -1401,8 +1427,8 @@ vec3 perturb(vec3 N, vec3 nm) {
 }
 void main() {
     float L = floor(v_layer + 0.5);
-    if (L > 20.5) { frag = vec4(0.0, 0.0, 0.0, v_col.a * (1.0 - u_night * 0.6)); return; }
-    if (L > 19.5) { frag = vec4(fogit(v_col.rgb * (1.0 + u_night * 0.5)), v_col.a); return; }
+    if (L > 30.5) { frag = vec4(0.0, 0.0, 0.0, v_col.a * (1.0 - u_night * 0.6)); return; }
+    if (L > 29.5) { frag = vec4(fogit(v_col.rgb * (1.0 + u_night * 0.5)), v_col.a); return; }
     vec4 t = texture(u_tex, vec3(v_uv, L));
     vec3 N = normalize(v_nrm);
     vec3 nm = texture(u_nrm, vec3(v_uv, L)).xyz * 2.0 - 1.0;
@@ -1448,7 +1474,7 @@ const SFS: &str = r#"
 precision highp float;
 in float v_layer;
 out vec4 frag;
-void main() { if (v_layer > 19.5) discard; frag = vec4(1.0); }
+void main() { if (v_layer > 29.5) discard; frag = vec4(1.0); }
 "#;
 
 const SKY_VS: &str = r#"
@@ -1641,7 +1667,7 @@ impl R3D {
                 upload(gl, &mut gpu, &it.mesh, glow::STATIC_DRAW);
                 rooms.push(gpu);
             }
-            Ok(R3D { prog, shadow_prog, sky_prog, tex, nrm, sky, shadow_tex, shadow_fb, chunks: HashMap::new(), dynamic: make_gpu(gl), trans: make_gpu(gl), map, models, skinned, vehicles, rooms })
+            Ok(R3D { prog, shadow_prog, sky_prog, tex, nrm, sky, shadow_tex, shadow_fb, chunks: HashMap::new(), dynamic: make_gpu(gl), trans: make_gpu(gl), map, models, skinned, vehicles, rooms, detail: make_gpu(gl), detail_at: None })
         }
     }
 
@@ -1674,6 +1700,13 @@ impl R3D {
                     gl.delete_buffer(g.vbo);
                 }
             }
+            // Blender kit around the camera (windows, doors, shops, balconies...)
+            let here = Pos2::new(fd.cam.x, fd.cam.z);
+            if self.detail_at.map_or(true, |p| (p - here).length() > 35.0) {
+                let mesh = crate::kit::detail_mesh(&self.map, here, 140.0);
+                upload(gl, &mut self.detail, &mesh, glow::STATIC_DRAW);
+                self.detail_at = Some(here);
+            }
             upload(gl, &mut self.dynamic, &fd.opaque, glow::STREAM_DRAW);
             upload(gl, &mut self.trans, &fd.translucent, glow::STREAM_DRAW);
 
@@ -1704,6 +1737,10 @@ impl R3D {
             if self.dynamic.count > 0 {
                 gl.bind_vertex_array(Some(self.dynamic.vao));
                 gl.draw_arrays(glow::TRIANGLES, 0, self.dynamic.count);
+            }
+            if self.detail.count > 0 {
+                gl.bind_vertex_array(Some(self.detail.vao));
+                gl.draw_arrays(glow::TRIANGLES, 0, self.detail.count);
             }
             let mf = models::Frame {
                 vp: &fd.light_vp,
@@ -1782,6 +1819,10 @@ impl R3D {
             }
             gl.bind_vertex_array(Some(self.dynamic.vao));
             gl.draw_arrays(glow::TRIANGLES, 0, self.dynamic.count);
+            if self.detail.count > 0 {
+                gl.bind_vertex_array(Some(self.detail.vao));
+                gl.draw_arrays(glow::TRIANGLES, 0, self.detail.count);
+            }
 
             let mf = models::Frame {
                 vp: &fd.view_proj,

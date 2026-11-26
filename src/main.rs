@@ -3,6 +3,7 @@
 
 mod empire;
 mod game;
+mod kit;
 mod life;
 mod skinned;
 mod statics;
@@ -128,6 +129,15 @@ impl App {
                 app.start_story(0);
             } else if !std::env::args().any(|a| a == "--menu") {
                 app.start_free(42);
+                if let (Ok(p), Some(g)) = (std::env::var("OC_POS"), app.game.as_mut()) {
+                    let v: Vec<f32> = p.split(',').filter_map(|x| x.parse().ok()).collect();
+                    if v.len() >= 2 {
+                        let at = app.map.road_point(Pos2::new(v[0], v[1]));
+                        let ang = v.get(2).copied().unwrap_or(0.0);
+                        g.place_player(&app.map, at, ang);
+                        app.cam_yaw = ang;
+                    }
+                }
                 // test hook: OC_INSIDE=<room> [OC_ACT=<spot name>]
                 if let (Ok(r), Some(g)) = (std::env::var("OC_INSIDE"), app.game.as_mut()) {
                     let i: usize = r.parse().unwrap_or(0);
