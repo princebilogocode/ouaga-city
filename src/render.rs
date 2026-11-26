@@ -3,7 +3,7 @@ use crate::empire::fcfa;
 use crate::map::Map;
 use crate::net::Remote;
 use eframe::egui::{self as egui};
-use egui::{pos2, vec2, Align2, Color32, FontId, Mesh, Painter, Pos2, Rect, Shape, Stroke, Vec2};
+use egui::{pos2, vec2, Align2, Color32, FontId, Mesh, Painter, Pos2, Rect, Shape, Stroke};
 
 pub struct Cam {
     pub center: Pos2,
@@ -489,6 +489,25 @@ fn draw_minimap(p: &Painter, h: &Hud) {
             }
         }
     }
+    // GPS route along the streets (purple to the marked spot, yellow for a mission)
+    let gps_col = if g.waypoint.is_some() { Color32::from_rgb(190, 90, 255) } else { Color32::from_rgb(255, 205, 40) };
+    for s in g.gps.windows(2) {
+        if let Some((a, b)) = clip_circle(w2s(s[0]), w2s(s[1]), c, rad - 2.0) {
+            p.line_segment([a, b], Stroke::new(5.0, gps_col));
+        }
+    }
+    for sv in &h.map.services {
+        let q = w2s(sv.pos);
+        if (q - c).length() < rad - 6.0 && (sv.pos - pp).length() < 500.0 {
+            let k = crate::r3d::service_color(sv.kind);
+            p.circle_filled(q, 3.0, Color32::from_rgb((k[0] * 255.0) as u8, (k[1] * 255.0) as u8, (k[2] * 255.0) as u8));
+        }
+    }
+    if let Some(w) = g.waypoint {
+        let s = edge(w, 8.0);
+        p.circle_filled(s, 8.0, Color32::from_rgb(190, 90, 255));
+        p.text(s, Align2::CENTER_CENTER, "✔", FontId::proportional(11.0), Color32::WHITE);
+    }
     for (bp, owned) in h.biz {
         let s = w2s(*bp);
         if (s - c).length() < rad - 6.0 {
@@ -553,21 +572,53 @@ fn draw_minimap(p: &Painter, h: &Hud) {
     p.text(np, Align2::CENTER_CENTER, "N", FontId::proportional(13.0), Color32::WHITE);
 }
 
-pub fn draw_full_map(p: &Painter, map: &Map, g: &Game, screen: Rect, remotes: &[Remote]) {
-    p.rect_filled(screen, 0.0, Color32::from_rgb(30, 28, 24));
+/// What the full-screen map shows: where it looks, how close, and the spot being chosen.
+pub struct MapView {
+    pub center: Pos2,
+    pub zoom: f32,
+    pub pending: Option<Pos2>,
+    pub hover: Option<String>,
+}
+
+pub fn map_cam(map: &Map, screen: Rect, v: &MapView) -> Cam {
     let ext = map.max - map.min;
-    let scale = ((screen.width() - 40.0) / ext.x).min((screen.height() - 60.0) / ext.y);
-    let cam = Cam { center: map.min + ext * 0.5, scale, screen };
-    let r = Rect::from_center_size(screen.center(), ext * scale);
+    let fit = ((screen.width() - 40.0) / ext.x).min((screen.height() - 60.0) / ext.y);
+    Cam { center: v.center, scale: fit * v.zoom, screen }
+}
+
+pub fn draw_full_map(p: &Painter, map: &Map, g: &Game, screen: Rect, remotes: &[Remote], v: &MapView) {
+    p.rect_filled(screen, 0.0, Color32::from_rgb(30, 28, 24));
+    let cam = map_cam(map, screen, v);
+    let p = &p.with_clip_rect(screen);
+    let r = Rect::from_two_pos(cam.w2s(map.min), cam.w2s(map.max));
     p.rect_filled(r, 4.0, darken(GROUND, 0.85));
-    let (lo, hi) = (map.min, map.max);
+    let (lo, hi) = cam.view();
     draw_areas(p, map, &cam, lo, hi);
-    draw_roads(p, map, &cam, lo, hi, 0.5, 4..=4, false);
-    draw_roads(p, map, &cam, lo, hi, 1.5, 0..=3, false);
+    draw_roads(p, map, &cam, lo, hi, 0.5 * v.zoom.sqrt(), 4..=4, false);
+    draw_roads(p, map, &cam, lo, hi, 1.5 * v.zoom.sqrt(), 0..=3, false);
     for a in &map.areas {
         if !a.name.is_empty() {
             let c = a.min + (a.max - a.min) * 0.5;
             p.text(cam.w2s(c), Align2::CENTER_CENTER, &a.name, FontId::proportional(12.0), Color32::from_rgb(200, 230, 255));
+        }
+    }
+    // shops, restaurants, pharmacies, banks, clinics (enterable)
+    if v.zoom > 1.6 {
+        for sv in &map.services {
+            if sv.pos.x < lo.x || sv.pos.x > hi.x || sv.pos.y < lo.y || sv.pos.y > hi.y {
+                continue;
+            }
+            let k = crate::r3d::service_color(sv.kind);
+            let col = Color32::from_rgb((k[0] * 255.0) as u8, (k[1] * 255.0) as u8, (k[2] * 255.0) as u8);
+            let s = cam.w2s(sv.pos);
+            let rr = (1.5 + v.zoom * 0.5).min(7.0);
+            p.circle_filled(s, rr + 1.0, Color32::BLACK);
+            p.circle_filled(s, rr, col);
+            if v.zoom > 9.0 {
+                let icon = match sv.kind { 'E' => "🍴", 'H' => "+", 'K' => "✚", 'N' => "$", _ => "🛍" };
+                p.text(s, Align2::CENTER_CENTER, icon, FontId::proportional(rr * 1.3), Color32::BLACK);
+                p.text(s + vec2(0.0, rr + 2.0), Align2::CENTER_TOP, sv.label(), FontId::proportional(11.0), Color32::from_white_alpha(220));
+            }
         }
     }
     for q in &map.pois {
@@ -577,19 +628,36 @@ pub fn draw_full_map(p: &Painter, map: &Map, g: &Game, screen: Rect, remotes: &[
                 p.text(s, Align2::CENTER_CENTER, &q.name, FontId::proportional(14.0), Color32::from_rgb(255, 240, 200));
             }
             'P' => {
-                p.circle_filled(s, 3.0, Color32::from_rgb(80, 120, 255));
+                p.circle_filled(s, 4.0, Color32::from_rgb(80, 120, 255));
             }
             'H' => {
-                p.circle_filled(s, 2.5, Color32::from_rgb(255, 90, 90));
+                p.circle_filled(s, 3.5, Color32::from_rgb(255, 90, 90));
             }
             'M' => {
-                p.circle_filled(s, 3.5, Color32::from_rgb(255, 210, 0));
+                p.circle_filled(s, 4.5, Color32::from_rgb(255, 210, 0));
             }
             _ => {}
         }
     }
+    // GPS route and the marked destination
+    let gps_col = if g.waypoint.is_some() { Color32::from_rgb(190, 90, 255) } else { Color32::from_rgb(255, 205, 40) };
+    if g.gps.len() >= 2 {
+        p.add(Shape::line(g.gps.iter().map(|&q| cam.w2s(q)).collect(), Stroke::new(4.0, gps_col)));
+    }
     if let Some(m) = &g.mission {
-        p.circle_filled(cam.w2s(m.to), 6.0, Color32::from_rgb(60, 200, 255));
+        p.circle_filled(cam.w2s(m.to), 7.0, Color32::from_rgb(60, 200, 255));
+    }
+    if let Some(w) = g.waypoint {
+        let s = cam.w2s(w);
+        p.circle_filled(s, 13.0, Color32::from_rgb(190, 90, 255));
+        p.circle_stroke(s, 13.0, Stroke::new(2.0, Color32::WHITE));
+        p.text(s, Align2::CENTER_CENTER, "✔", FontId::proportional(17.0), Color32::WHITE);
+    }
+    if let Some(w) = v.pending {
+        let s = cam.w2s(w);
+        p.circle_stroke(s, 12.0, Stroke::new(3.0, Color32::WHITE));
+        p.line_segment([s + vec2(-18.0, 0.0), s + vec2(18.0, 0.0)], Stroke::new(1.5, Color32::WHITE));
+        p.line_segment([s + vec2(0.0, -18.0), s + vec2(0.0, 18.0)], Stroke::new(1.5, Color32::WHITE));
     }
     for rm in remotes {
         let s = cam.w2s(pos2(rm.x, rm.y));
@@ -597,11 +665,25 @@ pub fn draw_full_map(p: &Painter, map: &Map, g: &Game, screen: Rect, remotes: &[
         p.text(s + vec2(0.0, -8.0), Align2::CENTER_BOTTOM, &rm.name, FontId::proportional(12.0), Color32::WHITE);
     }
     let s = cam.w2s(g.player_pos());
-    p.circle_filled(s, 6.0, Color32::WHITE);
-    p.circle_stroke(s, 9.0, Stroke::new(2.0, Color32::from_rgb(255, 60, 60)));
-    p.text(screen.center_top() + vec2(0.0, 10.0), Align2::CENTER_TOP, "Ouagadougou — M pour fermer · jaune : marchés (courses) · bleu : police · rouge : santé", FontId::proportional(15.0), Color32::WHITE);
+    let a = g.player.angle;
+    let f = vec2(a.cos(), a.sin());
+    let rg = vec2(-f.y, f.x);
+    p.add(Shape::convex_polygon(vec![s + f * 12.0, s - f * 7.0 + rg * 8.0, s - f * 3.0, s - f * 7.0 - rg * 8.0], Color32::WHITE, Stroke::new(2.0, Color32::from_rgb(255, 60, 60))));
+    if let Some(h) = &v.hover {
+        p.text(screen.center_bottom() + vec2(0.0, -64.0), Align2::CENTER_BOTTOM, h, FontId::proportional(18.0), Color32::WHITE);
+    }
+    let bar = Rect::from_min_size(screen.left_top(), vec2(screen.width(), 58.0));
+    p.rect_filled(bar, 0.0, Color32::from_black_alpha(170));
+    p.text(screen.center_top() + vec2(0.0, 8.0), Align2::CENTER_TOP, "Ouagadougou — molette : zoom · glisser : déplacer · clic : choisir une destination · Entrée : valider (✔) · Suppr : effacer · M : fermer", FontId::proportional(15.0), Color32::WHITE);
+    let legend = [("Restaurants / maquis", 'E'), ("Santé", 'H'), ("Pharmacies", 'K'), ("Banques", 'N'), ("Boutiques", 'O')];
+    let mut x = screen.center_top().x - 330.0;
+    for (name, k) in legend {
+        let c = crate::r3d::service_color(k);
+        p.circle_filled(pos2(x, screen.top() + 42.0), 6.0, Color32::from_rgb((c[0] * 255.0) as u8, (c[1] * 255.0) as u8, (c[2] * 255.0) as u8));
+        p.text(pos2(x + 10.0, screen.top() + 42.0), Align2::LEFT_CENTER, name, FontId::proportional(13.0), Color32::WHITE);
+        x += 140.0;
+    }
     p.text(screen.right_bottom() + vec2(-10.0, -6.0), Align2::RIGHT_BOTTOM, "Données cartographiques © contributeurs OpenStreetMap (ODbL)", FontId::proportional(11.0), Color32::from_white_alpha(170));
-    let _ = Vec2::ZERO;
 }
 
 pub fn draw_portrait(p: &Painter, c: Pos2, r: f32, skin: Color32, clothes: Color32) {

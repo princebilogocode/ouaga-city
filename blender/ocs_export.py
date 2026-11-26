@@ -40,6 +40,7 @@ def export(objects, path, uv_scale=2.0, apply_mods=True):
         mw = o.matrix_world
         nw = mw.to_3x3().inverted().transposed()
         mats = [s.material.name if s.material else "" for s in o.material_slots]
+        uvl = bm.loops.layers.uv.active
         for f in bm.faces:
             name = mats[f.material_index] if f.material_index < len(mats) else ""
             layer, col = decode(name)
@@ -48,7 +49,9 @@ def export(objects, path, uv_scale=2.0, apply_mods=True):
             for loop in f.loops:
                 p = mw @ loop.vert.co
                 n = (nw @ (loop.vert.normal if f.smooth else f.normal)).normalized()
-                if ax == 0:
+                if name.endswith("_UV") and uvl is not None:
+                    uv = tuple(loop[uvl].uv)
+                elif ax == 0:
                     uv = (p.y / uv_scale, p.z / uv_scale)
                 elif ax == 1:
                     uv = (p.x / uv_scale, p.z / uv_scale)

@@ -1,0 +1,1 @@
+{"size": [10.0, 8.0, 3.2], "colliders": [[1.1, -2.5, 1.9, 2.5], [4.45, -3.25, 4.95, 3.25], [-4.65, -3.65, -4.15, -3.15]], "spots": [{"name": "sortie", "label": "E : sortir", "x": -4.2, "z": 0.0, "yaw": 3.141592653589793}, {"name": "pharma", "label": "E : acheter des médicaments (santé +40, 800 FCFA)", "x": 0.8, "z": -0.0, "yaw": 0.0}]}

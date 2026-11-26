@@ -21,6 +21,12 @@ pub const V_TAXI: usize = 1;
 pub const V_POLICE: usize = 2;
 pub const V_MINIBUS: usize = 3;
 pub const V_WHEEL: usize = 4;
+pub const V_PICKUP: usize = 5;
+pub const V_SUV: usize = 6;
+pub const V_LUXE: usize = 7;
+pub const V_ANCIENNE: usize = 8;
+pub const V_AMBULANCE: usize = 9;
+pub const V_AUTOECOLE: usize = 10;
 
 pub fn vehicles() -> &'static Vec<Vec<f32>> {
     static D: OnceLock<Vec<Vec<f32>>> = OnceLock::new();
@@ -31,6 +37,37 @@ pub fn vehicles() -> &'static Vec<Vec<f32>> {
             ocs(include_bytes!("../assets/vehicles/police.ocs")),
             ocs(include_bytes!("../assets/vehicles/minibus.ocs")),
             ocs(include_bytes!("../assets/vehicles/wheel.ocs")),
+            ocs(include_bytes!("../assets/vehicles/pickup.ocs")),
+            ocs(include_bytes!("../assets/vehicles/suv.ocs")),
+            ocs(include_bytes!("../assets/vehicles/luxe.ocs")),
+            ocs(include_bytes!("../assets/vehicles/ancienne.ocs")),
+            ocs(include_bytes!("../assets/vehicles/ambulance.ocs")),
+            ocs(include_bytes!("../assets/vehicles/autoecole.ocs")),
+        ]
+    })
+}
+
+pub const T_NEEM: usize = 0;
+pub const T_MANGUIER: usize = 1;
+pub const T_FLAMBOYANT: usize = 2;
+pub const T_BAOBAB: usize = 3;
+pub const T_PALMIER: usize = 4;
+
+/// Trees modelled in Blender (blender/build_trees.py): for each species the detailed mesh, then the far one.
+pub fn trees() -> &'static Vec<Vec<f32>> {
+    static D: OnceLock<Vec<Vec<f32>>> = OnceLock::new();
+    D.get_or_init(|| {
+        vec![
+            ocs(include_bytes!("../assets/trees/neem.ocs")),
+            ocs(include_bytes!("../assets/trees/neem_lod.ocs")),
+            ocs(include_bytes!("../assets/trees/manguier.ocs")),
+            ocs(include_bytes!("../assets/trees/manguier_lod.ocs")),
+            ocs(include_bytes!("../assets/trees/flamboyant.ocs")),
+            ocs(include_bytes!("../assets/trees/flamboyant_lod.ocs")),
+            ocs(include_bytes!("../assets/trees/baobab.ocs")),
+            ocs(include_bytes!("../assets/trees/baobab_lod.ocs")),
+            ocs(include_bytes!("../assets/trees/palmier.ocs")),
+            ocs(include_bytes!("../assets/trees/palmier_lod.ocs")),
         ]
     })
 }
@@ -39,6 +76,12 @@ pub fn vehicles() -> &'static Vec<Vec<f32>> {
 pub fn wheels(kind: usize) -> [[f32; 3]; 4] {
     match kind {
         V_MINIBUS => [[2.0, 0.42, 0.88], [2.0, 0.42, -0.88], [-1.95, 0.42, 0.88], [-1.95, 0.42, -0.88]],
+        V_PICKUP => [[1.6, 0.38, 0.84], [1.6, 0.38, -0.84], [-1.7, 0.38, 0.84], [-1.7, 0.38, -0.84]],
+        V_SUV => [[1.45, 0.38, 0.87], [1.45, 0.38, -0.87], [-1.45, 0.38, 0.87], [-1.45, 0.38, -0.87]],
+        V_LUXE => [[1.45, 0.36, 0.84], [1.45, 0.36, -0.84], [-1.5, 0.36, 0.84], [-1.5, 0.36, -0.84]],
+        V_ANCIENNE => [[1.3, 0.36, 0.74], [1.3, 0.36, -0.74], [-1.3, 0.36, 0.74], [-1.3, 0.36, -0.74]],
+        V_AMBULANCE => [[1.75, 0.4, 0.9], [1.75, 0.4, -0.9], [-1.8, 0.4, 0.9], [-1.8, 0.4, -0.9]],
+        V_AUTOECOLE => [[1.25, 0.36, 0.75], [1.25, 0.36, -0.75], [-1.25, 0.36, 0.75], [-1.25, 0.36, -0.75]],
         _ => [[1.35, 0.36, 0.8], [1.35, 0.36, -0.8], [-1.35, 0.36, 0.8], [-1.35, 0.36, -0.8]],
     }
 }
@@ -121,6 +164,10 @@ pub const I_MAQUIS: usize = 0;
 pub const I_APPART: usize = 1;
 pub const I_GYM: usize = 2;
 pub const I_GARAGE: usize = 3;
+pub const I_HOPITAL: usize = 4;
+pub const I_BOUTIQUE: usize = 5;
+pub const I_PHARMACIE: usize = 6;
+pub const I_BANQUE: usize = 7;
 
 pub fn interiors() -> &'static Vec<Interior> {
     static D: OnceLock<Vec<Interior>> = OnceLock::new();
@@ -130,6 +177,10 @@ pub fn interiors() -> &'static Vec<Interior> {
             parse("appartement", "Appartement de Bila", include_bytes!("../assets/interiors/appartement.ocs"), include_str!("../assets/interiors/appartement.json")),
             parse("salle_sport", "Salle de sport", include_bytes!("../assets/interiors/salle_sport.ocs"), include_str!("../assets/interiors/salle_sport.json")),
             parse("garage", "Garage de Bila", include_bytes!("../assets/interiors/garage.ocs"), include_str!("../assets/interiors/garage.json")),
+            parse("hopital", "Centre de santé", include_bytes!("../assets/interiors/hopital.ocs"), include_str!("../assets/interiors/hopital.json")),
+            parse("boutique", "Boutique", include_bytes!("../assets/interiors/boutique.ocs"), include_str!("../assets/interiors/boutique.json")),
+            parse("pharmacie", "Pharmacie", include_bytes!("../assets/interiors/pharmacie.ocs"), include_str!("../assets/interiors/pharmacie.json")),
+            parse("banque", "Banque", include_bytes!("../assets/interiors/banque.ocs"), include_str!("../assets/interiors/banque.json")),
         ]
     })
 }

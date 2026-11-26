@@ -25,6 +25,8 @@ pub const MPFB: [(&str, bool, u8); 10] = [
     ("f_grandmere", true, 2),
 ];
 pub const C_MPFB0: usize = 5;
+/// Bila's outfits (wardrobe): t-shirt and jeans, dark suit, jacket
+pub const BILA_OUTFITS: [(usize, &str); 3] = [(C_BILA, "T-shirt et jean"), (15, "Costume sombre"), (16, "Veste et jean")];
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Anim {
@@ -155,7 +157,7 @@ fn parse(bytes: &[u8], color: &'static [u8], normal: &'static [u8]) -> Option<Ch
 pub fn chars() -> &'static Vec<CharData> {
     static DATA: OnceLock<Vec<CharData>> = OnceLock::new();
     DATA.get_or_init(|| {
-        let src: [(&[u8], &'static [u8], &'static [u8]); 15] = [
+        let src: [(&[u8], &'static [u8], &'static [u8]); 17] = [
             (include_bytes!("../assets/chars/bila.ocm"), include_bytes!("../assets/chars/bila_c.jpg"), include_bytes!("../assets/chars/bila_n.jpg")),
             (include_bytes!("../assets/chars/femme_wax.ocm"), include_bytes!("../assets/chars/femme_wax_c.jpg"), include_bytes!("../assets/chars/femme_wax_n.jpg")),
             (include_bytes!("../assets/chars/homme_boubou.ocm"), include_bytes!("../assets/chars/homme_boubou_c.jpg"), include_bytes!("../assets/chars/homme_boubou_n.jpg")),
@@ -171,6 +173,8 @@ pub fn chars() -> &'static Vec<CharData> {
             (include_bytes!("../assets/chars/f_sportive.ocm"), include_bytes!("../assets/chars/f_sportive_c.jpg"), include_bytes!("../assets/chars/f_sportive_n.jpg")),
             (include_bytes!("../assets/chars/f_maman.ocm"), include_bytes!("../assets/chars/f_maman_c.jpg"), include_bytes!("../assets/chars/f_maman_n.jpg")),
             (include_bytes!("../assets/chars/f_grandmere.ocm"), include_bytes!("../assets/chars/f_grandmere_c.jpg"), include_bytes!("../assets/chars/f_grandmere_n.jpg")),
+            (include_bytes!("../assets/chars/bila_costume.ocm"), include_bytes!("../assets/chars/bila_costume_c.jpg"), include_bytes!("../assets/chars/bila_costume_n.jpg")),
+            (include_bytes!("../assets/chars/bila_veste.ocm"), include_bytes!("../assets/chars/bila_veste_c.jpg"), include_bytes!("../assets/chars/bila_veste_n.jpg")),
         ];
         src.iter().filter_map(|(m, c, n)| parse(m, c, n)).collect()
     })

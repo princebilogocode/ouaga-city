@@ -226,7 +226,94 @@ def wheel():
     export(parts, os.path.join(OUT, "wheel.ocs"))
 
 
+def variant(kind):
+    """More cars of Ouaga, after the person's pictures: pickup, SUV, luxury saloon, old 504-style
+    saloon, ambulance, driving-school car."""
+    clear()
+    W = 1.85
+    lights = (2.2, -2.2, 0.64, 0.72)
+    extra = []
+    if kind == "pickup":
+        W = 1.9
+        prof = [(-2.6, 0.38), (2.45, 0.38), (2.58, 0.5), (2.6, 0.82), (2.45, 1.05), (1.4, 1.12), (1.0, 1.2), (0.62, 1.78), (-0.55, 1.8), (-0.66, 1.2), (-0.72, 1.06), (-2.55, 1.06), (-2.62, 0.82)]
+        body = body_mesh("body", prof, W, 1.2, 0.9, [0.5, 1.2], [-0.6, 0.98])
+        win = lambda c, n: c.z > 1.22 and n.z < 0.8 and -0.6 < c.x < 1.0
+        arches, r = (1.6, -1.7), 0.44
+        lights = (2.55, -2.6, 0.8, 0.85)
+        # open load bed: dark floor and side rails
+        extra.append(box("bed", (-1.62, 0, 1.075), (1.75, W - 0.25, 0.04), "L8_38_38_40"))
+        for y in (W / 2 - 0.06, -W / 2 + 0.06):
+            extra.append(box("rail", (-1.62, y, 1.12), (1.8, 0.08, 0.1), "PAINT", 0.02))
+        extra.append(box("bags", (-1.4, 0.2, 1.35), (0.9, 0.8, 0.5), "L8_150_110_70", 0.08))
+    elif kind == "suv":
+        W = 1.95
+        prof = [(-2.3, 0.42), (2.25, 0.42), (2.38, 0.58), (2.4, 0.88), (2.25, 1.06), (1.35, 1.14), (0.95, 1.22), (0.55, 1.8), (0.35, 1.87), (-2.05, 1.88), (-2.3, 1.76), (-2.38, 1.1), (-2.4, 0.62)]
+        body = body_mesh("body", prof, W, 1.22, 0.9, [0.55, 1.22], [-2.15, -0.75, -0.62, 0.96])
+        win = lambda c, n: c.z > 1.24 and n.z < 0.8 and -2.2 < c.x < 0.97 and not (-0.75 < c.x < -0.62 and abs(n.y) > 0.5)
+        arches, r = (1.45, -1.45), 0.46
+        lights = (2.36, -2.36, 0.88, 1.0)
+        extra.append(box("spare", (-2.47, 0, 1.0), (0.16, 0.62, 0.62), "L8_25_25_28", 0.06))
+        for y in (0.6, -0.6):
+            extra.append(box("roofbar", (-0.6, y, 1.93), (2.2, 0.05, 0.05), "L8_40_40_42"))
+    elif kind == "luxe":
+        W = 1.9
+        prof = [(-2.4, 0.28), (2.35, 0.28), (2.48, 0.4), (2.5, 0.58), (2.35, 0.7), (1.3, 0.8), (1.0, 0.86), (0.35, 1.3), (0.0, 1.36), (-1.0, 1.34), (-1.6, 1.08), (-2.3, 0.95), (-2.45, 0.78), (-2.48, 0.45)]
+        body = body_mesh("body", prof, W, 0.86, 0.82, [0.42, 0.86], [-1.55, -0.3, -0.2, 0.98])
+        win = lambda c, n: c.z > 0.88 and n.z < 0.85 and -1.58 < c.x < 1.0 and not (-0.3 < c.x < -0.2 and abs(n.y) > 0.5)
+        arches, r = (1.45, -1.5), 0.42
+        lights = (2.45, -2.42, 0.55, 0.78)
+        extra.append(box("grille", (2.5, 0, 0.5), (0.04, 0.9, 0.16), "L8_190_192_198", 0.01))
+    elif kind == "ancienne":
+        W = 1.7
+        prof = [(-2.25, 0.32), (2.15, 0.32), (2.25, 0.45), (2.26, 0.72), (2.15, 0.78), (1.05, 0.86), (0.85, 0.92), (0.45, 1.38), (-0.95, 1.4), (-1.35, 0.98), (-2.15, 0.95), (-2.26, 0.85), (-2.28, 0.45)]
+        body = body_mesh("body", prof, W, 0.92, 0.86, [0.45, 0.92], [-1.3, -0.3, -0.2, 0.88])
+        win = lambda c, n: c.z > 0.94 and n.z < 0.85 and -1.33 < c.x < 0.9 and not (-0.3 < c.x < -0.2 and abs(n.y) > 0.5)
+        arches, r = (1.3, -1.3), 0.4
+        lights = (2.24, -2.26, 0.62, 0.7)
+        for x in (2.3, -2.32):
+            extra.append(box("bumper", (x, 0, 0.42), (0.06, W + 0.04, 0.1), "L8_190_192_198", 0.02))
+    elif kind == "ambulance":
+        W = 2.0
+        prof = [(-2.7, 0.36), (2.4, 0.36), (2.55, 0.55), (2.55, 0.95), (2.3, 1.25), (1.75, 2.05), (1.5, 2.2), (-2.6, 2.3), (-2.75, 2.15), (-2.78, 0.55)]
+        body = body_mesh("body", prof, W, 9.0, 1.0, [0.45, 0.95, 1.15, 1.35, 1.95], [-2.0, 0.6, 1.3])
+        win = lambda c, n: (c.x > 1.5 and c.z > 1.3 and n.x > 0.3) or (0.6 < c.x < 1.75 and 1.35 < c.z < 1.95 and abs(n.y) > 0.6)
+        arches, r = (1.75, -1.8), 0.46
+        lights = (2.53, -2.76, 0.8, 0.95)
+        extra.append(box("bar_r", (1.3, 0.4, 2.33), (0.3, 0.6, 0.14), "EMIT_255_40_40", 0.03))
+        extra.append(box("bar_b", (1.3, -0.4, 2.33), (0.3, 0.6, 0.14), "EMIT_60_110_255", 0.03))
+        for y in (W / 2 + 0.005, -W / 2 - 0.005):
+            extra.append(box("cross_v", (-0.8, y, 1.65), (0.16, 0.01, 0.6), "L8_200_30_30"))
+            extra.append(box("cross_h", (-0.8, y, 1.65), (0.6, 0.01, 0.16), "L8_200_30_30"))
+    else:  # autoecole: a small saloon with the driving-school sign on the roof
+        prof = [(-2.0, 0.3), (1.95, 0.3), (2.06, 0.42), (2.08, 0.6), (2.0, 0.74), (1.7, 0.82), (1.0, 0.88), (0.8, 0.95), (0.35, 1.34), (0.15, 1.4), (-0.9, 1.4), (-1.15, 1.3), (-1.85, 0.95), (-2.05, 0.8), (-2.08, 0.5)]
+        W = 1.72
+        body = body_mesh("body", prof, W, 0.9, 0.84, [0.45, 0.9], [-1.5, -0.45, -0.35, 0.8])
+        win = lambda c, n: c.z > 0.92 and n.z < 0.8 and -1.52 < c.x < 0.82 and not (-0.45 < c.x < -0.35 and abs(n.y) > 0.5)
+        arches, r = (1.25, -1.25), 0.4
+        lights = (2.04, -2.05, 0.64, 0.72)
+        extra.append(box("sign", (-0.3, 0, 1.55), (0.3, 0.75, 0.24), "L8_245_245_245", 0.03))
+        for y in (0.381, -0.381):
+            extra.append(box("sign_band", (-0.3, y, 1.55), (0.25, 0.01, 0.1), "L8_200_30_30"))
+    rules = [(GLASS, win), (TRIM, lambda c, n: c.z < 0.45)]
+    if kind == "ambulance":
+        rules.append(("L8_200_30_30", lambda c, n: 0.95 < c.z < 1.15 and abs(n.y) > 0.6))
+        rules.append(("L8_242_242_240", lambda c, n: True))
+    if kind == "autoecole":
+        rules.append(("L8_240_240_238", lambda c, n: True))
+    finish(body, rules, arches, r, W)
+    parts = [body] + extra
+    fx, bx, hz, tz = lights
+    for y in (W / 2 - 0.35, -W / 2 + 0.35):
+        parts.append(box("hl", (fx, y, hz), (0.07, 0.34, 0.1), HEAD, 0.03))
+        parts.append(box("tl", (bx, y, tz), (0.07, 0.3, 0.12), TAIL, 0.03))
+    for y in (W / 2 + 0.03, -W / 2 - 0.03):
+        parts.append(box("mirror", (0.85 if kind != "pickup" else 0.95, y + (0.06 if y > 0 else -0.06), 1.0 if kind not in ("suv", "pickup", "ambulance") else 1.3), (0.12, 0.1, 0.09), TRIM, 0.03))
+    export(parts, os.path.join(OUT, f"{kind}.ocs"))
+
+
 for k in ("sedan", "taxi", "police"):
     car(k)
 minibus()
 wheel()
+for k in ("pickup", "suv", "luxe", "ancienne", "ambulance", "autoecole"):
+    variant(k)

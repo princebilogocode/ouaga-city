@@ -3,7 +3,7 @@
 
 use crate::game::{ActKind, Activity, Door, Driver, Game, Talk, VKind};
 use crate::map::Map;
-use crate::statics::{self, I_APPART, I_GARAGE, I_GYM, I_MAQUIS};
+use crate::statics::{self, I_APPART, I_BANQUE, I_BOUTIQUE, I_GARAGE, I_GYM, I_HOPITAL, I_MAQUIS, I_PHARMACIE};
 use eframe::egui::{vec2, Color32, Pos2, Vec2};
 
 const GREETINGS: [&str; 10] = [
@@ -24,7 +24,7 @@ pub fn make_doors(map: &Map) -> Vec<Door> {
     let mut doors = Vec::new();
     let mut add = |name: &str, fallback: Pos2, off: Vec2, interior: usize, label: &str| {
         let p = map.poi_named(name).unwrap_or(fallback);
-        doors.push(Door { interior, pos: map.road_point(p + off), label: label.to_string() });
+        doors.push(Door { interior, pos: map.road_point(p + off), label: label.to_string(), kind: '*' });
     };
     add("Gare de Ouagadougou", Pos2::new(-714.0, -952.0), vec2(-40.0, 25.0), I_APPART, "Appartement de Bila");
     add("Gare de Ouagadougou", Pos2::new(-714.0, -952.0), vec2(-25.0, 45.0), I_GARAGE, "Garage de Bila");
@@ -34,6 +34,17 @@ pub fn make_doors(map: &Map) -> Vec<Door> {
     add("Patte d'Oie", Pos2::new(509.0, 4140.0), vec2(35.0, 10.0), I_MAQUIS, "Maquis de Patte d'Oie");
     add("Stade du 4-Août", Pos2::new(-3670.0, -408.0), vec2(60.0, 40.0), I_GYM, "Salle de sport du 4-Août");
     add("Marché de Dassaqgho", Pos2::new(4560.0, -2710.0), vec2(-30.0, 25.0), I_GYM, "Salle de sport de Dassasgho");
+    // every restaurant, maquis, pharmacy, bank, clinic and shop of the real city (OpenStreetMap)
+    for s in &map.services {
+        let interior = match s.kind {
+            'H' => I_HOPITAL,
+            'K' => I_PHARMACIE,
+            'N' => I_BANQUE,
+            'E' => I_MAQUIS,
+            _ => I_BOUTIQUE,
+        };
+        doors.push(Door { interior, pos: map.door_point(s.pos), label: s.label(), kind: s.kind });
+    }
     doors
 }
 
@@ -57,9 +68,10 @@ impl Game {
                 }
                 return Some(s.label.clone());
             }
-            return Some(format!("{} · les cercles dorés sont interactifs · sortie : la porte", it.title));
+            let title = if self.inside_label.is_empty() { it.title.to_string() } else { self.inside_label.clone() };
+            return Some(format!("{title} · approche-toi des meubles pour agir · sortie : la porte"));
         }
-        if let Some(d) = self.doors.iter().find(|d| (d.pos - self.player_pos()).length() < 6.0) {
+        if let Some(d) = self.door_near(self.player_pos()).filter(|d| d.kind == '*' || self.player.vehicle.is_none()) {
             if d.interior == I_GARAGE {
                 return Some(match (self.player.vehicle, self.garage_car) {
                     (Some(_), None) => "E : garer ce véhicule dans ton garage".into(),
@@ -115,6 +127,52 @@ impl Game {
                 n if n.starts_with("tapis") => self.start_activity(ActKind::Run, 8.0, spot, s.yaw),
                 "sac" => self.start_activity(ActKind::Punch, 6.0, spot, s.yaw),
                 n if n.starts_with("squat") => self.start_activity(ActKind::Squat, 7.0, spot, s.yaw),
+                "armoire" | "cabine" => {
+                    let n = crate::skinned::BILA_OUTFITS.len();
+                    self.outfit = (self.outfit + 1) % n;
+                    self.msg(format!("Bila se change : {}", crate::skinned::BILA_OUTFITS[self.outfit].1));
+                }
+                "accueil" => {
+                    if self.player.health >= 100.0 {
+                        self.msg("L'infirmière : « Tu es en pleine forme, Bila ! »");
+                    } else if self.pay(2000) {
+                        self.player.health = 100.0;
+                        self.msg("Consultation et soins : santé au maximum (2 000 FCFA).");
+                    }
+                }
+                "lit_hop" => self.start_activity(ActKind::Sit, 5.0, spot, s.yaw),
+                "caisse" => {
+                    if self.pay(500) {
+                        self.hunger = (self.hunger + 35.0).min(100.0);
+                        self.msg("Pain, sardines et un sachet d'eau fraîche : faim calmée (500 FCFA).");
+                    }
+                }
+                "pharma" => {
+                    if self.pay(800) {
+                        self.player.health = (self.player.health + 40.0).min(100.0);
+                        self.msg("Le pharmacien te donne de quoi te soigner : santé +40 (800 FCFA).");
+                    }
+                }
+                "guichet" => {
+                    let cash = self.player.money - 1000;
+                    if cash > 0 {
+                        self.player.money -= cash;
+                        self.bank += cash;
+                        self.msg(format!("Dépôt de {cash} FCFA. Solde à la banque : {} FCFA (à l'abri des vols).", self.bank));
+                    } else {
+                        self.msg(format!("Solde à la banque : {} FCFA. Garde au moins 1 000 FCFA sur toi.", self.bank));
+                    }
+                }
+                "dab" => {
+                    let n = self.bank.min(10_000);
+                    if n > 0 {
+                        self.bank -= n;
+                        self.player.money += n;
+                        self.msg(format!("Retrait de {n} FCFA. Solde : {} FCFA.", self.bank));
+                    } else {
+                        self.msg("Ton compte est vide.");
+                    }
+                }
                 "vehicule" => {
                     if let Some((kind, color)) = self.garage_car.take() {
                         self.leave_interior(map);
@@ -132,7 +190,7 @@ impl Game {
             return true;
         }
         let pp = self.player_pos();
-        let Some(d) = self.doors.iter().find(|d| (d.pos - pp).length() < 6.0).cloned() else { return false };
+        let Some(d) = self.door_near(pp).cloned() else { return false };
         if d.interior == I_GARAGE {
             if let Some(vi) = self.player.vehicle {
                 if self.garage_car.is_none() {
@@ -151,6 +209,7 @@ impl Game {
         }
         self.outside = (self.player.pos, self.player.angle);
         self.inside = Some(d.interior);
+        self.inside_label = d.label.clone();
         let it = &statics::interiors()[d.interior];
         let a = statics::anchor(d.interior);
         self.player.pos = Pos2::new(a.x - it.size[0] / 2.0 + 1.4, a.y);
@@ -158,6 +217,14 @@ impl Game {
         self.aiming = false;
         self.msg(format!("Tu entres : {}", d.label));
         true
+    }
+
+    /// The closest door within reach (Bila's own places first).
+    pub fn door_near(&self, p: Pos2) -> Option<&Door> {
+        self.doors
+            .iter()
+            .filter(|d| (d.pos - p).length() < if d.kind == '*' { 6.0 } else { 3.0 })
+            .min_by(|a, b| (a.pos - p).length().total_cmp(&(b.pos - p).length()))
     }
 
     fn leave_interior(&mut self, map: &Map) {

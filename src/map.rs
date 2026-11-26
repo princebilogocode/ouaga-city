@@ -6,6 +6,7 @@ use eframe::egui::{self as egui};
 use egui::{pos2, vec2, Pos2, Vec2};
 
 pub const MAP_DATA: &str = include_str!("../assets/ouaga.map");
+pub const SERVICES_DATA: &str = include_str!("../assets/services.map");
 
 pub struct Rng(pub u64);
 impl Rng {
@@ -83,6 +84,45 @@ impl Poi {
             'S' => "Stade".into(),
             _ => "Quartier".into(),
         }
+    }
+}
+
+/// A place open to the public, from OpenStreetMap: E eat/drink, K pharmacy, N bank, O shop, H health.
+pub struct Service {
+    pub kind: char,
+    pub sub: String,
+    pub name: String,
+    pub pos: Pos2,
+}
+impl Service {
+    pub fn label(&self) -> String {
+        let what = match self.sub.as_str() {
+            "restaurant" => "Restaurant",
+            "fast_food" => "Fast-food",
+            "cafe" => "Café",
+            "bar" | "pub" => "Maquis",
+            "ice_cream" => "Glacier",
+            "pharmacy" => "Pharmacie",
+            "bank" => "Banque",
+            "hospital" => "Hôpital",
+            "clinic" => "Clinique",
+            "doctors" => "Cabinet médical",
+            "supermarket" => "Supermarché",
+            "convenience" | "general" => "Alimentation",
+            "clothes" => "Boutique de vêtements",
+            "mall" => "Centre commercial",
+            "bakery" => "Boulangerie",
+            "hairdresser" | "beauty" => "Salon de coiffure",
+            "mobile_phone" => "Téléphonie",
+            "hardware" => "Quincaillerie",
+            "tailor" => "Couture",
+            _ => match self.kind {
+                'H' => "Centre de santé",
+                'E' => "Maquis",
+                _ => "Boutique",
+            },
+        };
+        if self.name.is_empty() { what.to_string() } else { format!("{what} « {} »", self.name) }
     }
 }
 
@@ -186,6 +226,7 @@ pub struct Map {
     pub roads: Vec<Road>,
     pub areas: Vec<Area>,
     pub pois: Vec<Poi>,
+    pub services: Vec<Service>,
     pub landmarks: Vec<Landmark>,
     pub buildings: Vec<Building>,
     pub trees: Vec<Tree>,
@@ -198,6 +239,16 @@ pub struct Map {
     pub wall_grid: Grid,
     pub min: Pos2,
     pub max: Pos2,
+}
+
+pub fn road_y(kind: u8) -> f32 {
+    match kind {
+        0 => 0.10,
+        1 => 0.09,
+        2 => 0.08,
+        3 => 0.07,
+        _ => 0.05,
+    }
 }
 
 pub fn seg_dist(p: Pos2, a: Pos2, b: Pos2) -> (f32, f32) {
@@ -434,6 +485,15 @@ impl Map {
             roads,
             areas,
             pois,
+            services: SERVICES_DATA
+                .lines()
+                .filter_map(|l| {
+                    let mut it = l.split('|');
+                    let (k, name, xy, sub) = (it.next()?, it.next()?, it.next()?, it.next().unwrap_or(""));
+                    let (x, y) = xy.split_once(',')?;
+                    Some(Service { kind: k.chars().next()?, sub: sub.trim().to_string(), name: name.to_string(), pos: pos2(x.parse().ok()?, y.parse().ok()?) })
+                })
+                .collect(),
             landmarks,
             buildings: Vec::new(),
             trees: Vec::new(),
@@ -577,6 +637,27 @@ impl Map {
         hit
     }
 
+    /// Where the street door of the building holding `p` is: walk from p towards the nearest
+    /// road until outside the walls, then one step more (on the pavement, facing the street).
+    pub fn door_point(&self, p: Pos2) -> Pos2 {
+        let r = self.road_point(p);
+        let d = r - p;
+        let len = d.length();
+        if len < 0.5 || !self.point_in_building(p) {
+            return p;
+        }
+        let dir = d / len;
+        let mut t = 0.0;
+        while t < len.min(60.0) {
+            let q = p + dir * t;
+            if !self.point_in_building(q) {
+                return q + dir * 0.8;
+            }
+            t += 0.5;
+        }
+        r
+    }
+
     pub fn point_in_building(&self, p: Pos2) -> bool {
         let mut inside = false;
         self.bld_grid.query(p, p, |id| {
@@ -712,6 +793,36 @@ impl Map {
     /// true when no road is closer than its half width + margin
     pub fn road_clear(&self, p: Pos2, margin: f32) -> bool {
         self.road_at(p, margin).is_none()
+    }
+
+    /// Height of the ground surface under a point: asphalt or laterite roads sit a few
+    /// centimetres up, kerbs and pavements ~25 cm. Wheels and feet stand on it.
+    pub fn surface_y(&self, p: Pos2, vehicle: bool) -> f32 {
+        let mut road = f32::NEG_INFINITY;
+        let mut walk = 0.0f32;
+        self.road_grid.query(p - vec2(2.5, 2.5), p + vec2(2.5, 2.5), |id| {
+            let (ri, si) = self.segs[id as usize];
+            let r = &self.roads[ri as usize];
+            let (d, _) = seg_dist(p, r.pts[si as usize], r.pts[si as usize + 1]);
+            let hw = r.half_width();
+            let y = road_y(r.kind);
+            if d < hw - 0.05 {
+                road = road.max(y);
+            } else if r.kind <= 3 && d < hw + 0.25 {
+                walk = walk.max(y + 0.18);
+            } else if r.kind <= 3 && d < hw + 2.2 {
+                walk = walk.max(y + 0.16);
+            } else if d < hw + 0.3 {
+                walk = walk.max(y);
+            }
+        });
+        if road.is_finite() && (vehicle || road >= walk) {
+            return road;
+        }
+        if vehicle {
+            return 0.0;
+        }
+        walk.max(if road.is_finite() { road } else { 0.0 })
     }
 
     /// Road kind under a point (the most important one).

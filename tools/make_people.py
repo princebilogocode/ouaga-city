@@ -15,10 +15,14 @@ PEOPLE = {
     "f_sportive": dict(gender=0.0, age=0.4, muscle=0.7, weight=0.4, height=0.6, skin="young_african_female", hair="ponytail01", clothes=["female_sportsuit01", "shoes06"], tint={"ponytail": [0.09, 0.07, 0.06]}),
     "f_maman": dict(gender=0.0, age=0.6, muscle=0.4, weight=0.7, height=0.45, skin="middleage_african_female", hair="bob02", clothes=["female_casualsuit02", "shoes02"], tint={"casualsuit02": [1.0, 0.75, 0.35], "bob02": [0.1, 0.08, 0.07]}),
     "f_grandmere": dict(gender=0.0, age=0.92, muscle=0.3, weight=0.6, height=0.4, skin="old_african_female", hair="short04", clothes=["female_casualsuit02", "shoes02"], tint={"casualsuit02": [0.55, 0.75, 1.0]}),
+    # Bila, the hero, and his outfits (wardrobe at the apartment)
+    "bila": dict(gender=1.0, age=0.42, muscle=0.62, weight=0.42, height=0.75, skin="young_african_male", hair="short02", clothes=["male_casualsuit06", "shoes01"], tint={"short02": [0.08, 0.06, 0.05]}, retex={"casualsuit06": os.path.join(W, "casualsuit06_clean.png")}, faces=18000, lift_uv={"casualsuit06": [0.58, 0.008]}),
+    "bila_costume": dict(gender=1.0, age=0.42, muscle=0.62, weight=0.42, height=0.75, skin="young_african_male", hair="short02", clothes=["male_elegantsuit01", "shoes05"], tint={"elegantsuit": [0.25, 0.25, 0.28], "short02": [0.08, 0.06, 0.05]}, faces=14000),
+    "bila_veste": dict(gender=1.0, age=0.42, muscle=0.62, weight=0.42, height=0.75, skin="young_african_male", hair="short02", clothes=["male_casualsuit05", "shoes06"], tint={"short02": [0.08, 0.06, 0.05]}, faces=14000),
 }
-only = sys.argv[1:] or list(PEOPLE)
+only = sys.argv[1:] or [k for k in PEOPLE if not k.startswith("bila")]
 for name in only:
-    spec = dict(PEOPLE[name]); spec["faces"] = 7000
+    spec = dict(PEOPLE[name]); spec["faces"] = spec.get("faces", 7000)
     sp = os.path.join(W, name + ".json"); json.dump(spec, open(sp, "w"))
     glb = os.path.join(W, name + ".glb"); jn = os.path.join(W, name + "_joints.json")
     r = subprocess.run([B, "-b", "-P", os.path.join(APP, "blender", "make_human.py"), "--", sp, glb, jn], capture_output=True, text=True)

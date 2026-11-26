@@ -77,6 +77,8 @@ pub struct Vehicle {
     pub route: Option<Route>,
     pub stuck: f32,
     pub reverse: f32,
+    /// traffic: how long it has been blocked (then it goes around)
+    pub wait: f32,
     pub tag: u8,
     /// the driver's identity
     pub person: u32,
@@ -124,6 +126,8 @@ pub struct Door {
     pub interior: usize,
     pub pos: Pos2,
     pub label: String,
+    /// '*' Bila's places (big marker), else the service kind (E eat, H health, K pharmacy, N bank, O shop)
+    pub kind: char,
 }
 
 /// A new person of Ouaga (a stable identity number).
@@ -149,6 +153,11 @@ pub struct Ped {
     pub remove: bool,
     /// who this person is (stable: name, story, appearance)
     pub person: u32,
+    /// stopped for a while (chatting, phoning, waiting), and how: 1 idle, 2 talking
+    pub pause: f32,
+    pub act: u8,
+    /// just pulled out of their car by Bila (staggers and protests)
+    pub pulled: f32,
 }
 
 pub struct Mission {
@@ -242,6 +251,19 @@ pub struct Game {
     pub force: f32,
     pub garage_car: Option<(VKind, Color32)>,
     pub ev_saved: bool,
+    /// Bila's outfit (index in skinned::BILA_OUTFITS)
+    pub outfit: usize,
+    /// money kept at the bank (safe when Bila is robbed, arrested or hospitalised)
+    pub bank: i64,
+    /// name of the place Bila is inside (a restaurant, a pharmacy...)
+    pub inside_label: String,
+    /// the spot the player marked on the map, and the road route to it (GPS)
+    pub waypoint: Option<Pos2>,
+    pub gps: Vec<Pos2>,
+    pub gps_t: f32,
+    pub story_target: Option<Pos2>,
+    /// time spent walking to a vehicle's door
+    pub enter_walk: f32,
 }
 
 const CAR_COLORS: [Color32; 8] = [
@@ -345,6 +367,14 @@ impl Game {
             force: 20.0,
             garage_car: None,
             ev_saved: false,
+            outfit: 0,
+            bank: 0,
+            inside_label: String::new(),
+            waypoint: None,
+            gps: Vec::new(),
+            gps_t: 0.0,
+            story_target: None,
+            enter_walk: 0.0,
         };
         // the player starts on a moto, the city's favourite ride
         g.vehicles.push(Vehicle {
@@ -358,6 +388,7 @@ impl Game {
             route: None,
             stuck: 0.0,
             reverse: 0.0,
+            wait: 0.0,
             tag: 0,
             person: crate::game::new_person(),
             dead: false,
@@ -439,6 +470,7 @@ impl Game {
             route: if driver == Driver::None { None } else { route },
             stuck: 0.0,
             reverse: 0.0,
+            wait: 0.0,
             tag,
             person: crate::game::new_person(),
             dead: false,
@@ -530,7 +562,7 @@ impl Game {
                 v.vel = Vec2::ZERO;
                 let pos = v.pos + vec2(-v.angle.sin(), v.angle.cos()) * 2.0;
                 let road = v.route.map(|r| r.road).unwrap_or(0);
-                self.peds.push(Ped { pos, angle: 0.0, road, i: 0, dir: 1, side: 1.0, flee: 6.0, down: 0.0, color: CLOTHES[self.rng.below(8)], remove: false, person: crate::game::new_person(), });
+                self.peds.push(Ped { pos, angle: 0.0, road, i: 0, dir: 1, side: 1.0, flee: 6.0, down: 0.0, color: CLOTHES[self.rng.below(8)], remove: false, pause: 0.0, act: 0, pulled: 0.0, person: crate::game::new_person(), });
             }
             if self.police_near(80.0) && self.player.wanted == 0 {
                 self.add_wanted(1);
@@ -664,6 +696,7 @@ impl Game {
                     route: Some(route),
                     stuck: 0.0,
                     reverse: 0.0,
+            wait: 0.0,
             tag: 0,
             person: crate::game::new_person(),
                     dead: false,
@@ -689,6 +722,7 @@ impl Game {
                     route: None,
                     stuck: 0.0,
                     reverse: 0.0,
+            wait: 0.0,
             tag: 0,
             person: crate::game::new_person(),
                     dead: false,
@@ -713,7 +747,7 @@ impl Game {
                     flee: 0.0,
                     down: 0.0,
                     color,
-                    remove: false, person: crate::game::new_person(), });
+                    remove: false, pause: 0.0, act: 0, pulled: 0.0, person: crate::game::new_person(), });
             }
         }
         // police chasing a wanted player
@@ -732,6 +766,7 @@ impl Game {
                     route: None,
                     stuck: 0.0,
                     reverse: 0.0,
+            wait: 0.0,
             tag: 0,
             person: crate::game::new_person(),
                     dead: false,
@@ -784,6 +819,7 @@ impl Game {
             self.shoot(map);
         }
         self.enemy_fire();
+        self.update_gps(map, dt);
         self.update_traffic(map, dt);
         self.update_police(map, dt);
         self.update_peds(map, dt);
@@ -791,6 +827,43 @@ impl Game {
         self.update_mission(map, dt);
         self.update_wanted(map, dt);
         self.cleanup();
+    }
+
+    /// Only the city around (traffic, passers-by) keeps living, e.g. during a story dialogue.
+    pub fn update_ambient(&mut self, map: &Map, dt: f32) {
+        self.time += dt;
+        self.update_traffic(map, dt);
+        self.update_peds(map, dt);
+        self.vehicle_collisions(dt);
+    }
+
+    /// The GPS route to the marked spot (or the mission's target), refreshed as Bila moves.
+    fn update_gps(&mut self, map: &Map, dt: f32) {
+        let pp = self.player_pos();
+        if let Some(w) = self.waypoint {
+            if (w - pp).length() < 14.0 {
+                self.waypoint = None;
+                self.gps.clear();
+                self.msg("Tu es arrivé à destination.");
+            }
+        }
+        let target = self.waypoint.or(self.mission.as_ref().map(|m| m.to)).or(self.story_target);
+        let Some(t) = target else {
+            self.gps.clear();
+            return;
+        };
+        self.gps_t -= dt;
+        let off = self.gps.first().map_or(true, |&a| (a - pp).length() > 25.0);
+        if self.gps_t <= 0.0 || self.gps.is_empty() || self.gps.last() != Some(&t) || off {
+            self.gps = crate::gps::route(map, pp, t);
+            self.gps_t = 3.0;
+        } else if let Some(first) = self.gps.first_mut() {
+            *first = pp;
+            // drop the corners already passed
+            while self.gps.len() > 2 && (self.gps[1] - pp).length() < 10.0 {
+                self.gps.remove(1);
+            }
+        }
     }
 
     fn update_player(&mut self, map: &Map, inp: Input, dt: f32) {
@@ -802,24 +875,53 @@ impl Game {
             return;
         }
         if let Some(vi) = self.entering {
-            // walking to the door and sitting in
-            self.enter_t -= dt;
-            if vi < self.vehicles.len() {
-                let v = &self.vehicles[vi];
-                let door = v.pos + right_of(v.fwd()) * -(v.kind.spec().1 + 0.45);
-                let d = door - self.player.pos;
-                if d.length() > 0.05 {
-                    self.player.angle = d.y.atan2(d.x);
-                    self.player.pos += d.normalized() * d.length().min(3.0 * dt);
-                }
-                self.player.walk += 3.0 * dt;
-                self.player.moving = 0.8;
+            // walk to the driver's door; if someone is at the wheel, open the door and pull them out
+            if vi >= self.vehicles.len() || self.vehicles[vi].remove || self.vehicles[vi].dead {
+                self.entering = None;
+                return;
             }
+            let v = &self.vehicles[vi];
+            let moto = v.kind == VKind::Moto;
+            let door = v.pos + right_of(v.fwd()) * -(v.kind.spec().1 + 0.45);
+            let d = door - self.player.pos;
+            if d.length() > 0.3 && self.enter_walk < 3.0 {
+                self.enter_walk += dt;
+                self.player.angle = d.y.atan2(d.x);
+                self.player.pos += d.normalized() * d.length().min(3.2 * dt);
+                self.player.walk += 3.2 * dt;
+                self.player.moving = 0.9;
+                return;
+            }
+            self.player.moving = 0.0;
+            self.player.pos = door;
+            let face = v.pos - self.player.pos;
+            self.player.angle = face.y.atan2(face.x);
+            let drv = v.driver;
+            if matches!(drv, Driver::Traffic | Driver::Police | Driver::Gang) {
+                // GTA-style carjacking: Bila yanks the door open and throws the driver out
+                let (vpos, fwd, person, kind) = (v.pos, v.fwd(), v.person, v.kind);
+                let road = v.route.map(|r| r.road).unwrap_or(0);
+                let out = vpos + right_of(fwd) * -(kind.spec().1 + 1.3) + fwd * 0.8;
+                self.peds.push(Ped { pos: out, angle: (out - vpos).y.atan2((out - vpos).x), road, i: 0, dir: 1, side: 1.0, flee: 0.0, down: 0.0, color: CLOTHES[self.rng.below(8)], remove: false, pause: 0.0, act: 0, pulled: if moto { 1.2 } else { 1.8 }, person });
+                let w = &mut self.vehicles[vi];
+                w.driver = Driver::None;
+                w.vel = Vec2::ZERO;
+                w.route = None;
+                let who = crate::people::person(person);
+                if drv == Driver::Police {
+                    self.msg("Tu sors un policier de sa voiture !");
+                    self.add_wanted(2);
+                } else {
+                    self.msg(format!("Tu sors {} de son {} — « Eh ! Mon véhicule ! »", who.name, kind.name().to_lowercase()));
+                    self.add_wanted(1);
+                }
+                self.punch_t = 0.5;
+                self.enter_t = if moto { 0.9 } else { 1.3 };
+            }
+            self.enter_t -= dt;
             if self.enter_t <= 0.0 {
                 self.entering = None;
-                if vi < self.vehicles.len() && !self.vehicles[vi].remove {
-                    self.finish_enter(vi);
-                }
+                self.finish_enter(vi);
             }
             return;
         }
@@ -914,38 +1016,14 @@ impl Game {
             .min_by(|a, b| a.1.total_cmp(&b.1));
         if let Some((vi, _)) = best {
             self.entering = Some(vi);
-            self.enter_t = if self.vehicles[vi].kind == VKind::Moto { 0.35 } else { 0.7 };
+            self.enter_walk = 0.0;
+            self.enter_t = if self.vehicles[vi].kind == VKind::Moto { 0.3 } else { 0.55 };
             self.aiming = false;
         }
     }
 
     fn finish_enter(&mut self, vi: usize) {
         {
-            let (drv, kind) = (self.vehicles[vi].driver, self.vehicles[vi].kind);
-            match drv {
-                Driver::Traffic => {
-                    let pos = self.vehicles[vi].pos + right_of(self.vehicles[vi].fwd()) * -2.5;
-                    let road = self.vehicles[vi].route.map(|r| r.road).unwrap_or(0);
-                    self.peds.push(Ped {
-                        pos,
-                        angle: 0.0,
-                        road,
-                        i: 0,
-                        dir: 1,
-                        side: 1.0,
-                        flee: 6.0,
-                        down: 0.0,
-                        color: CLOTHES[self.rng.below(8)],
-                        remove: false, person: crate::game::new_person(), });
-                    self.msg(format!("Tu as volé un(e) {} !", kind.name().to_lowercase()));
-                    self.add_wanted(1);
-                }
-                Driver::Police => {
-                    self.msg("Tu as volé une voiture de police !");
-                    self.add_wanted(2);
-                }
-                _ => {}
-            }
             let v = &mut self.vehicles[vi];
             v.driver = Driver::Player;
             v.route = None;
@@ -956,17 +1034,27 @@ impl Game {
     fn update_traffic(&mut self, map: &Map, dt: f32) {
         let pp = self.player_pos();
         // obstacles: positions of everything (for braking)
-        let obstacles: Vec<Pos2> = self
+        let entering = self.entering;
+        // obstacles: everything that can block a lane (position, speed, vehicle index)
+        let obstacles: Vec<(Pos2, f32, usize)> = self
             .vehicles
             .iter()
-            .filter(|v| !v.remove)
-            .map(|v| v.pos)
-            .chain(self.peds.iter().filter(|p| p.down <= 0.0).map(|p| p.pos))
-            .chain(std::iter::once(pp))
+            .enumerate()
+            .filter(|(_, v)| !v.remove)
+            .map(|(i, v)| (v.pos, v.speed().abs(), i))
+            .chain(self.peds.iter().filter(|p| p.down <= 0.0).map(|p| (p.pos, if p.pause > 0.0 { 0.0 } else { 1.4 }, usize::MAX)))
+            .chain(std::iter::once((pp, if self.player.vehicle.is_some() { 1.0 } else { self.player.moving }, usize::MAX)))
             .collect();
         for vi in 0..self.vehicles.len() {
             let gang = self.vehicles[vi].driver == Driver::Gang;
             if !(self.vehicles[vi].driver == Driver::Traffic || gang) || self.vehicles[vi].dead {
+                continue;
+            }
+            if entering == Some(vi) {
+                // Bila is opening the door: the driver brakes hard
+                let v = &mut self.vehicles[vi];
+                v.vel *= (1.0 - 6.0 * dt).max(0.0);
+                v.pos += v.vel * dt;
                 continue;
             }
             let Some(mut route) = self.vehicles[vi].route else { continue };
@@ -974,7 +1062,10 @@ impl Game {
             let target = road.pts[route.i];
             let prev_i = (route.i as i32 - route.dir).clamp(0, road.pts.len() as i32 - 1) as usize;
             let segd = (target - road.pts[prev_i]).normalized();
-            let aim = target + right_of(segd) * road.half_width() * 0.45;
+            // overtaking: after waiting behind something that doesn't move, go round it on the other side
+            let overtaking = self.vehicles[vi].wait > 2.5;
+            let lane = if overtaking { -0.35 } else { 0.45 };
+            let aim = target + right_of(segd) * road.half_width() * lane;
             let v = &self.vehicles[vi];
             if (aim - v.pos).length() < 5.0 || (target - v.pos).length() < 4.0 {
                 let ni = route.i as i32 + route.dir;
@@ -997,17 +1088,44 @@ impl Game {
             if gang {
                 desired = (base * 1.6).max(14.0) * (1.0 - turn.abs().min(1.2) / 2.0);
             }
+            if overtaking {
+                desired = desired.min(7.0);
+            }
             let fwd = v.fwd();
             let me = v.pos;
             let hl = v.kind.spec().0;
-            for (k, &o) in obstacles.iter().enumerate() {
-                if k == vi {
+            let mut blocked = false;
+            for &(o, osp, k) in obstacles.iter() {
+                if k == vi || (overtaking && osp < 0.6) {
                     continue;
                 }
                 let d = o - me;
                 let ahead = d.dot(fwd);
                 if !gang && ahead > hl && ahead < hl + 9.0 && (d - fwd * ahead).length() < 2.2 {
-                    desired = desired.min(((ahead - hl - 3.0) * 1.5).max(0.0));
+                    let lim = ((ahead - hl - 3.0) * 1.5).max(0.0);
+                    if lim < desired {
+                        desired = lim;
+                        blocked = osp < 0.6;
+                    }
+                }
+            }
+            {
+                let v = &mut self.vehicles[vi];
+                if overtaking {
+                    v.wait -= dt;
+                    if v.wait <= 2.5 {
+                        v.wait = 0.0;
+                    }
+                } else if blocked {
+                    v.wait += dt;
+                    if v.wait > 2.5 {
+                        v.wait = 7.0; // pull out and pass
+                        if v.kind != VKind::Moto && (v.pos - pp).length() < 30.0 {
+                            self.honk = 0.4;
+                        }
+                    }
+                } else {
+                    v.wait = (v.wait - dt).max(0.0);
                 }
             }
             let v = &mut self.vehicles[vi];
@@ -1145,6 +1263,26 @@ impl Game {
                 map.collide(&mut p.pos, 0.4);
                 continue;
             }
+            if p.pulled > 0.0 {
+                // thrown out of their car: stumble back, protest, then run off
+                p.pulled -= dt;
+                let back = vec2(p.angle.cos(), p.angle.sin());
+                p.pos += back * 1.2 * dt;
+                map.collide(&mut p.pos, 0.35);
+                if p.pulled <= 0.0 {
+                    p.flee = 5.0;
+                }
+                continue;
+            }
+            if p.pause > 0.0 {
+                // living their life: chatting with a neighbour, on the phone, waiting for someone
+                p.pause -= dt;
+                if (p.pos - pp).length() < 2.2 && self.player.vehicle.is_none() {
+                    let d = pp - p.pos;
+                    p.angle = d.y.atan2(d.x); // looks at Bila when he comes close
+                }
+                continue;
+            }
             let road = &map.roads[p.road];
             if p.i >= road.pts.len() {
                 p.remove = true;
@@ -1162,6 +1300,12 @@ impl Game {
                 } else {
                     p.i = ni as usize;
                 }
+                // now and then, stop for a while like real passers-by
+                let r = (p.person.wrapping_mul(2654435761) ^ (self.time * 1000.0) as u32) % 100;
+                if r < 22 {
+                    p.pause = 4.0 + (r % 9) as f32;
+                    p.act = if r % 3 == 0 { 2 } else { 1 };
+                }
                 continue;
             }
             let to = (aim - p.pos).normalized();
@@ -1170,6 +1314,27 @@ impl Game {
             map.collide(&mut p.pos, 0.35);
             if (p.pos - pp).length() > 400.0 {
                 p.remove = true;
+            }
+        }
+        // two passers-by who cross each other sometimes stop to greet and chat
+        if self.rng.f() < dt * 2.0 && self.peds.len() > 1 {
+            let a = self.rng.below(self.peds.len());
+            for b in 0..self.peds.len() {
+                if b == a {
+                    continue;
+                }
+                let (pa, pb) = (&self.peds[a], &self.peds[b]);
+                if pa.pause <= 0.0 && pb.pause <= 0.0 && pa.flee <= 0.0 && pb.flee <= 0.0 && pa.down <= 0.0 && pb.down <= 0.0 && pa.pulled <= 0.0 && pb.pulled <= 0.0 && (pa.pos - pb.pos).length() < 3.0 {
+                    let d = pb.pos - pa.pos;
+                    let (ang, t) = (d.y.atan2(d.x), 6.0 + self.rng.f() * 8.0);
+                    self.peds[a].angle = ang;
+                    self.peds[a].pause = t;
+                    self.peds[a].act = 2;
+                    self.peds[b].angle = ang + std::f32::consts::PI;
+                    self.peds[b].pause = t;
+                    self.peds[b].act = 2;
+                    break;
+                }
             }
         }
         if hits > 0 {

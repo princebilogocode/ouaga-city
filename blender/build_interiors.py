@@ -211,6 +211,7 @@ def appartement():
     r.cyl("lamp_shade", (bx + 0.85, 3.05, 1.0), 0.18, 0.22, "EMIT_255_225_170", 16, False, 0.12)
     r.box("wardrobe", (bx, -3.85, 1.1), (2.0, 0.65, 2.2), WOOD, 0.02)
     r.spot("lit", "E : dormir jusqu'au matin (sauvegarde)", bx - 1.2, 1.8, 0.0)
+    r.spot("armoire", "E : ouvrir l'armoire et changer de tenue", bx, -3.0, -math.pi / 2)
     # living room: sofa, coffee table, TV unit, rug
     r.box("rug", (-2.0, 0.6, 0.01), (3.2, 2.4, 0.02), "L14_255_255_255", collide=False)
     r.box("sofa_base", (-2.0, 2.9, 0.25), (2.6, 0.95, 0.45), "L18_70_95_140", 0.08)
@@ -319,7 +320,119 @@ def garage():
     r.finish()
 
 
+def hopital():
+    r = Room("hopital", 16.0, 11.0, 3.4, "L17_235_240_240", "L5_236_242_240")
+    L, W, H = r.L, r.W, r.H
+    # reception desk
+    r.box("desk", (-3.0, 0.0, 0.55), (1.0, 3.6, 1.1), "L8_240_240_240", 0.03)
+    r.box("desk_top", (-3.0, 0.0, 1.12), (1.15, 3.8, 0.05), "L8_30_120_120", 0.01, False)
+    r.box("screen", (-2.8, 0.8, 1.35), (0.05, 0.5, 0.35), BLACK, 0.01, False)
+    r.box("sign", (-2.95, 0.0, 2.6), (0.04, 2.4, 0.5), "L8_30_120_120", collide=False)
+    r.box("cross_v", (-3.0, 0.0, 2.6), (0.02, 0.16, 0.42), "EMIT_240_60_60", collide=False)
+    r.box("cross_h", (-3.0, 0.0, 2.6), (0.02, 0.42, 0.16), "EMIT_240_60_60", collide=False)
+    # waiting chairs
+    for k in range(6):
+        r.chair(-5.8, -4.2 + k * 0.6, 0.0, "L8_40_110_170")
+    # beds with curtains
+    for k, y in enumerate((-3.6, -1.2, 1.2, 3.6)):
+        x = 4.6
+        r.box("bed", (x, y, 0.4), (2.0, 0.95, 0.15), "L18_250_250_250", 0.03)
+        r.box("bed_frame", (x, y, 0.22), (2.0, 0.95, 0.3), CHROME, 0.0)
+        r.box("pillow", (x + 0.8, y, 0.52), (0.3, 0.7, 0.12), "L18_255_255_255", 0.05, False)
+        r.box("sheet", (x - 0.25, y, 0.5), (1.4, 0.98, 0.04), "L18_150_200_230", 0.02, False)
+        r.cyl("drip", (x + 1.2, y + 0.55, 0.9), 0.02, 1.8, CHROME, 6, False)
+        r.box("drip_bag", (x + 1.2, y + 0.55, 1.75), (0.05, 0.12, 0.2), "L6_220_235_240", collide=False)
+        r.box("curtain", (x - 0.2, y + 0.62, 1.3), (2.4, 0.03, 2.0), "L18_160_210_200", collide=False)
+    for x in (-4.0, 0.0, 4.0):
+        r.box("light", (x, 0, H - 0.04), (2.4, 0.4, 0.05), LAMP, collide=False)
+    for x in (-5.0, 0.0):
+        r.window(x, 1, 1.8)
+    r.plant(-L / 2 + 0.6, W / 2 - 0.6)
+    r.box("cabinet", (L / 2 - 0.4, 0, 1.0), (0.6, 2.0, 2.0), "L8_240_240_240", 0.02)
+    r.spot("accueil", "E : se faire soigner (santé au max, 2 000 FCFA)", -3.9, 0.0, 0.0)
+    r.spot("lit_hop", "E : se reposer sur un lit (santé +25)", 3.4, -1.2, 0.0)
+    r.finish()
+
+
+def boutique():
+    r = Room("boutique", 12.0, 9.0, 3.2, "L17_230_225_215", "L5_245_238_225")
+    L, W, H = r.L, r.W, r.H
+    # shelves full of goods
+    goods = ["L6_200_40_40", "L6_240_200_40", "L6_40_120_200", "L6_60_160_70", "L6_240_240_235", "L6_230_120_40"]
+    for k, y in enumerate((-2.4, 0.0, 2.4)):
+        r.box("shelf", (0.5, y, 0.9), (5.0, 0.6, 1.8), WOOD, 0.01)
+        for lvl in range(4):
+            for j in range(18):
+                col = goods[(j * 7 + lvl * 3 + k) % len(goods)]
+                for side in (-1, 1):
+                    r.box("good", (-1.8 + j * 0.27, y + side * 0.33, 0.25 + lvl * 0.45), (0.2, 0.06, 0.3), col, collide=False)
+    # counter with a cash register
+    r.box("counter", (-3.6, -2.6, 0.5), (1.6, 0.7, 1.0), WOOD_DARK, 0.02)
+    r.box("register", (-3.6, -2.6, 1.12), (0.4, 0.35, 0.22), BLACK, 0.02, False)
+    r.box("fridge", (L / 2 - 0.45, 3.4, 1.0), (0.7, 1.6, 2.0), "L8_230_230_235", 0.03)
+    r.box("fridge_glass", (L / 2 - 0.81, 3.4, 1.1), (0.02, 1.4, 1.6), "EMIT_190_225_255", collide=False)
+    # clothes rail and fitting booth
+    r.box("rail", (L / 2 - 0.8, -2.0, 1.7), (0.05, 2.6, 0.05), CHROME, collide=False)
+    for k in range(10):
+        r.box("cloth", (L / 2 - 0.8, -3.1 + k * 0.25, 1.25), (0.35, 0.05, 0.8), ["L14_255_255_255", "L26_255_255_255", "L27_255_255_255", "L28_255_255_255", "L15_255_255_255"][k % 5], collide=False)
+    r.box("booth", (L / 2 - 0.6, 1.0, 1.1), (1.1, 0.06, 2.2), "L14_255_255_255", collide=False)
+    r.box("mirror", (L / 2 - 0.04, 0.4, 1.2), (0.03, 0.8, 1.8), "L6_225_232_240", collide=False)
+    for x in (-3.0, 1.0, 4.0):
+        r.box("light", (x, 0, H - 0.04), (1.8, 0.3, 0.05), LAMP, collide=False)
+    r.window(-3.0, 1, 2.0)
+    r.spot("caisse", "E : acheter à manger et à boire (500 FCFA)", -3.6, -1.85, -math.pi / 2)
+    r.spot("cabine", "E : essayer une tenue (cabine d'essayage)", L / 2 - 1.0, 0.4, 0.0)
+    r.finish()
+
+
+def pharmacie():
+    r = Room("pharmacie", 10.0, 8.0, 3.2, "L17_240_245_240", "L5_240_246_240")
+    L, W, H = r.L, r.W, r.H
+    r.box("counter", (1.5, 0.0, 0.55), (0.8, 5.0, 1.1), "L8_245_245_245", 0.02)
+    r.box("counter_top", (1.5, 0.0, 1.12), (0.9, 5.2, 0.05), "L8_40_160_80", 0.01, False)
+    r.box("back_shelf", (L / 2 - 0.3, 0, 1.3), (0.5, 6.5, 2.6), "L8_245_245_245", 0.01)
+    for lvl in range(5):
+        for j in range(24):
+            col = ["L6_240_240_240", "L6_40_160_80", "L6_200_60_60", "L6_60_120_200"][(j + lvl) % 4]
+            r.box("box", (L / 2 - 0.58, -3.0 + j * 0.26, 0.35 + lvl * 0.45), (0.04, 0.2, 0.3), col, collide=False)
+    r.box("cross_v", (-L / 2 + 0.06, 0, 2.5), (0.02, 0.2, 0.6), "EMIT_60_220_90", collide=False)
+    r.box("cross_h", (-L / 2 + 0.06, 0, 2.5), (0.02, 0.6, 0.2), "EMIT_60_220_90", collide=False)
+    for x in (-2.0, 2.0):
+        r.box("light", (x, 0, H - 0.04), (1.6, 0.3, 0.05), LAMP, collide=False)
+    r.plant(-L / 2 + 0.6, W / 2 - 0.6)
+    r.spot("pharma", "E : acheter des médicaments (santé +40, 800 FCFA)", 0.8, 0.0, 0.0)
+    r.finish()
+
+
+def banque():
+    r = Room("banque", 14.0, 10.0, 3.8, "L39_255_255_255", "L5_238_234_226")
+    L, W, H = r.L, r.W, r.H
+    # counters behind glass
+    r.box("counter", (3.0, 0.0, 0.6), (0.9, 7.0, 1.2), WOOD_DARK, 0.02)
+    r.box("counter_top", (3.0, 0.0, 1.22), (1.0, 7.2, 0.05), "L17_200_200_200", 0.01, False)
+    r.box("glass", (3.0, 0.0, 1.9), (0.03, 7.0, 1.3), "L6_200_225_235", collide=False)
+    for y in (-2.4, 0.0, 2.4):
+        r.box("screen", (3.3, y, 1.45), (0.05, 0.5, 0.35), BLACK, 0.01, False)
+    # ATM on the side wall
+    r.box("atm", (-3.0, -W / 2 + 0.4, 0.9), (0.8, 0.6, 1.8), "L8_60_70_90", 0.03)
+    r.box("atm_screen", (-3.0, -W / 2 + 0.71, 1.25), (0.4, 0.02, 0.3), "EMIT_120_200_255", collide=False)
+    # waiting sofa and plants
+    r.box("sofa", (-3.0, W / 2 - 0.6, 0.3), (2.6, 0.8, 0.5), "L18_120_30_30", 0.06)
+    r.plant(-L / 2 + 0.6, W / 2 - 0.6)
+    r.plant(-L / 2 + 0.6, -W / 2 + 0.6)
+    for x in (-3.0, 1.0):
+        r.lamp(x, 0)
+    r.window(-3.0, 1, 2.2)
+    r.spot("guichet", "E : déposer ton argent liquide à la banque", 2.2, 0.0, 0.0)
+    r.spot("dab", "E : retirer 10 000 FCFA au distributeur", -3.0, -W / 2 + 1.1, -math.pi / 2)
+    r.finish()
+
+
 maquis()
 appartement()
 salle_sport()
 garage()
+hopital()
+boutique()
+pharmacie()
+banque()

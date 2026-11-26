@@ -3,6 +3,7 @@
 
 mod empire;
 mod game;
+mod gps;
 mod kit;
 mod life;
 mod skinned;
@@ -43,6 +44,7 @@ struct App {
     net: Option<Net>,
     error: String,
     show_map: bool,
+    map_view: render::MapView,
     show_empire: bool,
     paused: bool,
     shot: Option<PathBuf>,
@@ -103,6 +105,7 @@ impl App {
             net: None,
             error: String::new(),
             show_map: false,
+            map_view: render::MapView { center: Pos2::ZERO, zoom: 1.0, pending: None, hover: None },
             show_empire: false,
             paused: false,
             shot,
@@ -145,9 +148,52 @@ impl App {
                             if let Some(v) = g.vehicles.last_mut() {
                                 v.route = None;
                                 v.pos = ahead + egui::vec2(-ang.sin(), ang.cos()) * 3.0;
+                                if std::env::var("OC_JACK").is_ok() {
+                                    v.pos = at + egui::vec2(ang.cos(), ang.sin()) * 2.0 + egui::vec2(-ang.sin(), ang.cos()) * 3.2;
+                                    v.angle = ang;
+                                }
                                 v.angle = ang + 0.5;
                             }
                         }
+                    }
+                }
+                // test hooks: OC_TREE (stand by the nearest tree), OC_WAYPOINT=x,y (GPS), OC_MAP (open the map)
+                if let Some(g) = app.game.as_mut() {
+                    if std::env::var("OC_TREE").is_ok() {
+                        let pp = g.player.pos;
+                        if let Some(t) = app.map.trees.iter().filter(|t| t.r > 1.5).min_by(|a, b| (a.p - pp).length().total_cmp(&(b.p - pp).length())) {
+                            let ang = g.player.angle;
+                            g.player.vehicle = None;
+                            g.player.pos = t.p - egui::vec2(ang.cos(), ang.sin()) * std::env::var("OC_TREE").ok().and_then(|v| v.parse().ok()).unwrap_or(9.0f32);
+                        }
+                    }
+                    if let Ok(w) = std::env::var("OC_WAYPOINT") {
+                        let v: Vec<f32> = w.split(',').filter_map(|x| x.parse().ok()).collect();
+                        if v.len() >= 2 {
+                            g.waypoint = Some(app.map.road_point(Pos2::new(v[0], v[1])));
+                        }
+                    }
+                    if std::env::var("OC_CARS").is_ok() {
+                        // a parked row of every car model, to look at them
+                        let (pp, ang) = (g.player.pos, g.player.angle);
+                        let f = egui::vec2(ang.cos(), ang.sin());
+                        let r = egui::vec2(-f.y, f.x);
+                        let models = [statics::V_SEDAN, statics::V_PICKUP, statics::V_SUV, statics::V_LUXE, statics::V_ANCIENNE, statics::V_AUTOECOLE, statics::V_AMBULANCE];
+                        for (k, want) in models.iter().enumerate() {
+                            let person = (0u32..5000).find(|p| r3d::car_mesh(game::VKind::Car, *p) == *want).unwrap_or(0);
+                            g.spawn_vehicle(&app.map, pp, game::VKind::Car, game::Driver::None, Color32::from_rgb(180, 30, 35), 9);
+                            if let Some(v) = g.vehicles.last_mut() {
+                                v.person = person;
+                                v.route = None;
+                                v.pos = pp + f * (9.0 + k as f32 * 6.0) + r * if k % 2 == 0 { 3.5 } else { -3.5 };
+                                v.angle = ang + 0.5;
+                            }
+                        }
+                    }
+                    if std::env::var("OC_MAP").is_ok() {
+                        app.show_map = true;
+                        app.map_view.center = g.player_pos();
+                        app.map_view.zoom = 6.0;
                     }
                 }
                 // test hook: OC_INSIDE=<room> [OC_ACT=<spot name>]
@@ -373,7 +419,7 @@ impl App {
             if std::env::args().any(|a| a == "--aim") {
                 inp = Input { action: self.frame == 3, aim: self.frame > 20 && std::env::var("OC_NOAIM").is_err(), fire: std::env::var("OC_FIRE").is_ok() && self.frame > 60 && self.frame % 12 == 0, switch: if self.frame == 5 && std::env::var("OC_W0").is_err() { Some(1) } else { None }, ..Default::default() };
             } else {
-                inp = Input { up: self.frame > 10 && self.story.is_none() && std::env::var("OC_STILL").is_err(), action: std::env::var("OC_WALK").is_ok() && self.frame == 3, ..Default::default() };
+                inp = Input { up: self.frame > 10 && self.story.is_none() && std::env::var("OC_STILL").is_err(), action: (std::env::var("OC_WALK").is_ok() || std::env::var("OC_JACK").is_ok()) && self.frame == 3, ..Default::default() };
                 if std::env::var("OC_WALK").is_ok() {
                     inp.up = self.frame > 20;
                     inp.sprint = std::env::var("OC_RUN").is_ok();
@@ -382,6 +428,59 @@ impl App {
         }
         if map_key {
             self.show_map = !self.show_map;
+            if self.show_map {
+                if let Some(g) = &self.game {
+                    self.map_view.center = g.player_pos();
+                    self.map_view.zoom = 4.0;
+                    self.map_view.pending = None;
+                }
+            }
+        }
+        if self.show_map {
+            // the map takes the mouse: zoom, pan, choose a destination
+            let (pointer, scroll_y, drag_d, clicked, enter, del) = ctx.input(|i| {
+                (i.pointer.hover_pos(), i.smooth_scroll_delta.y, if i.pointer.primary_down() { i.pointer.delta() } else { egui::Vec2::ZERO }, i.pointer.primary_released() && i.pointer.total_drag_delta().map_or(true, |d| d.length() < 6.0) , i.key_pressed(Key::Enter), i.key_pressed(Key::Delete) || i.key_pressed(Key::Backspace))
+            });
+            let map = self.map.clone();
+            let cam = render::map_cam(&map, screen, &self.map_view);
+            let s2w = |q: Pos2| cam.center + (q - screen.center()) / cam.scale;
+            if scroll_y != 0.0 {
+                let before = pointer.map(s2w);
+                self.map_view.zoom = (self.map_view.zoom * (1.0 + scroll_y * 0.002)).clamp(1.0, 60.0);
+                if let (Some(b), Some(ptr)) = (before, pointer) {
+                    let cam2 = render::map_cam(&map, screen, &self.map_view);
+                    let after = cam2.center + (ptr - screen.center()) / cam2.scale;
+                    self.map_view.center += b - after;
+                }
+            }
+            self.map_view.center -= drag_d / cam.scale;
+            self.map_view.hover = pointer.and_then(|ptr| {
+                let w = s2w(ptr);
+                map.services.iter().filter(|sv| (sv.pos - w).length() * cam.scale < 10.0).min_by(|a, b| (a.pos - w).length().total_cmp(&(b.pos - w).length())).map(|sv| sv.label())
+            });
+            if clicked {
+                if let Some(ptr) = pointer {
+                    let w = s2w(ptr);
+                    let near_service = map.services.iter().filter(|sv| (sv.pos - w).length() * cam.scale < 10.0).min_by(|a, b| (a.pos - w).length().total_cmp(&(b.pos - w).length())).map(|sv| map.door_point(sv.pos));
+                    self.map_view.pending = Some(near_service.unwrap_or_else(|| map.road_point(w)));
+                }
+            }
+            if let Some(g) = self.game.as_mut() {
+                if enter {
+                    if let Some(w) = self.map_view.pending.take() {
+                        g.waypoint = Some(w);
+                        g.gps_t = 0.0;
+                        g.gps.clear();
+                        g.msg("Destination validée ✔ : suis l'itinéraire violet.");
+                    }
+                }
+                if del {
+                    g.waypoint = None;
+                    g.gps.clear();
+                    self.map_view.pending = None;
+                }
+            }
+            inp = Input::default();
         }
         if cam_key {
             self.high_cam = !self.high_cam;
@@ -428,6 +527,9 @@ impl App {
         if !self.paused && !in_dialog {
             game.update(&map, inp, dt);
             empire.update(game, dt);
+        } else if !self.paused {
+            // the city keeps living while Bila talks
+            game.update_ambient(&map, dt);
         }
         if let Some(st) = &mut self.story {
             if !self.paused {
@@ -526,7 +628,7 @@ impl App {
             (5.2, 1.6)
         };
         let height = height + self.pitch * dist;
-        let focus = Vec3::new(pp.x, if in_vehicle { 1.3 } else { 1.15 }, pp.y);
+        let focus = Vec3::new(pp.x, if in_vehicle { 1.3 } else { 1.15 } + map.surface_y(pp, in_vehicle), pp.y);
         let mut eye = if game.aiming {
             focus - fwd * 2.6 + right * 0.6 + Vec3::Y * 0.65
         } else {
@@ -612,6 +714,7 @@ impl App {
         }
 
         let story_target = self.story.as_ref().and_then(|s| s.target(game));
+        game.story_target = story_target;
         let chase_tag = self.story.as_ref().and_then(|s| s.current()).and_then(|st| match st.obj {
             Obj::Chase { tag, .. } => Some(tag),
             _ => None,
@@ -632,6 +735,7 @@ impl App {
         self.steer += (steer_in - self.steer) * (dt * 8.0).min(1.0);
         let scene = r3d::build_scene(&r3d::SceneInput {
             game,
+            map: &map,
             remotes: &remotes,
             cam: Pos2::new(eye.x, eye.z),
             marker,
@@ -663,7 +767,7 @@ impl App {
         let p = ui.painter().clone();
         let face = self.bila_face.as_ref().map(|t| t.id());
         if self.show_map {
-            render::draw_full_map(&p, &map, game, screen, &remotes);
+            render::draw_full_map(&p, &map, game, screen, &remotes, &self.map_view);
         } else {
             p.add(r3d::callback(screen, self.r3d.clone(), map.clone(), fd));
             if let Some(Err(e)) = self.r3d.lock().unwrap().as_ref() {
@@ -777,7 +881,7 @@ impl eframe::App for App {
         ctx.request_repaint();
         self.frame += 1;
         if let Some(path) = self.shot.clone() {
-            if self.frame >= 120 && !self.shot_sent {
+            if self.frame >= std::env::var("OC_FRAME").ok().and_then(|v| v.parse().ok()).unwrap_or(120) && !self.shot_sent {
                 self.shot_sent = true;
                 ctx.request_screenshot(move |img: Arc<egui::ColorImage>| {
                     let [w, h] = img.size;

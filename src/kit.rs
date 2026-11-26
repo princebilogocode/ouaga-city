@@ -195,6 +195,18 @@ pub fn detail_mesh(map: &Map, center: Pos2, radius: f32) -> Vec<f32> {
         }
     });
     gates_mesh(map, center, radius, &mut out);
+    // the detailed Blender trees near the camera (far ones are simpler, in the city chunks)
+    let mut seen_t = HashSet::new();
+    map.tree_grid.query(center - r, center + r, |id| {
+        if !seen_t.insert(id) {
+            return;
+        }
+        let t = &map.trees[id as usize];
+        if t.r > 0.0 && (t.p - center).length() < radius {
+            let (sp, m) = crate::r3d::tree_place(map, t, id);
+            crate::r3d::put_mesh(&mut out, &crate::statics::trees()[sp * 2], m, 1.0);
+        }
+    });
     out
 }
 
