@@ -141,11 +141,14 @@ def shopfront():
     for sx in (-1, 1):
         cyl(parts, (sx * (w / 2 + 0.1), -2.0, (h + 0.05) / 2), 0.05, h + 0.05, "L19_150_110_80", 8)
     # signboard above
-    box(parts, (0, -0.06, h + 0.75), (w, 0.08, 0.75), SIGN_WHITE, 0.01)
-    box(parts, (0, -0.105, h + 0.75), (w - 0.25, 0.01, 0.55), "PAINT")
-    for k in range(3):
-        box(parts, (-0.9 + k * 0.9, -0.115, h + 0.8), (0.6, 0.01, 0.12), SIGN_WHITE)
-    box(parts, (0, -0.115, h + 0.6), (2.2, 0.01, 0.06), SIGN_WHITE)
+    box(parts, (0, -0.06, h + 0.85), (w, 0.08, 1.25), SIGN_WHITE, 0.01)
+    # the painted sign itself: a single quad, its picture is chosen in the game
+    bpy.ops.mesh.primitive_plane_add(size=1, location=(0, -0.105, h + 0.85), rotation=(math.pi / 2, 0, 0))
+    o = bpy.context.active_object
+    o.scale = (w - 0.2, 1.1, 1)
+    bpy.ops.object.transform_apply(scale=True)
+    o.data.materials.append(mat("L30_255_255_255"))
+    parts.append(o)
     export(parts, os.path.join(OUT, "boutique.ocs"), uv_scale=1.0)
 
 

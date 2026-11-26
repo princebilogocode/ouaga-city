@@ -78,6 +78,8 @@ pub struct Vehicle {
     pub stuck: f32,
     pub reverse: f32,
     pub tag: u8,
+    /// the driver's identity
+    pub person: u32,
     pub dead: bool,
     pub remove: bool,
 }
@@ -111,6 +113,7 @@ pub struct Activity {
 #[derive(Clone, Debug)]
 pub struct Talk {
     pub ped: usize,
+    pub who: String,
     pub t: f32,
     pub line: String,
     pub reply: String,
@@ -121,6 +124,16 @@ pub struct Door {
     pub interior: usize,
     pub pos: Pos2,
     pub label: String,
+}
+
+/// A new person of Ouaga (a stable identity number).
+pub fn new_person() -> u32 {
+    use std::sync::atomic::{AtomicU32, Ordering};
+    static N: AtomicU32 = AtomicU32::new(0x2F6B_1C3D);
+    let n = N.fetch_add(0x9E37_79B9, Ordering::Relaxed);
+    let mut h = n ^ (n >> 16);
+    h = h.wrapping_mul(0x7feb_352d);
+    h ^ (h >> 15)
 }
 
 pub struct Ped {
@@ -134,6 +147,8 @@ pub struct Ped {
     pub down: f32,
     pub color: Color32,
     pub remove: bool,
+    /// who this person is (stable: name, story, appearance)
+    pub person: u32,
 }
 
 pub struct Mission {
@@ -344,6 +359,7 @@ impl Game {
             stuck: 0.0,
             reverse: 0.0,
             tag: 0,
+            person: crate::game::new_person(),
             dead: false,
             remove: false,
         });
@@ -424,6 +440,7 @@ impl Game {
             stuck: 0.0,
             reverse: 0.0,
             tag,
+            person: crate::game::new_person(),
             dead: false,
             remove: false,
         });
@@ -513,7 +530,7 @@ impl Game {
                 v.vel = Vec2::ZERO;
                 let pos = v.pos + vec2(-v.angle.sin(), v.angle.cos()) * 2.0;
                 let road = v.route.map(|r| r.road).unwrap_or(0);
-                self.peds.push(Ped { pos, angle: 0.0, road, i: 0, dir: 1, side: 1.0, flee: 6.0, down: 0.0, color: CLOTHES[self.rng.below(8)], remove: false });
+                self.peds.push(Ped { pos, angle: 0.0, road, i: 0, dir: 1, side: 1.0, flee: 6.0, down: 0.0, color: CLOTHES[self.rng.below(8)], remove: false, person: crate::game::new_person(), });
             }
             if self.police_near(80.0) && self.player.wanted == 0 {
                 self.add_wanted(1);
@@ -648,6 +665,7 @@ impl Game {
                     stuck: 0.0,
                     reverse: 0.0,
             tag: 0,
+            person: crate::game::new_person(),
                     dead: false,
                     remove: false,
                 });
@@ -672,6 +690,7 @@ impl Game {
                     stuck: 0.0,
                     reverse: 0.0,
             tag: 0,
+            person: crate::game::new_person(),
                     dead: false,
                     remove: false,
                 });
@@ -694,8 +713,7 @@ impl Game {
                     flee: 0.0,
                     down: 0.0,
                     color,
-                    remove: false,
-                });
+                    remove: false, person: crate::game::new_person(), });
             }
         }
         // police chasing a wanted player
@@ -715,6 +733,7 @@ impl Game {
                     stuck: 0.0,
                     reverse: 0.0,
             tag: 0,
+            person: crate::game::new_person(),
                     dead: false,
                     remove: false,
                 });
@@ -917,8 +936,7 @@ impl Game {
                         flee: 6.0,
                         down: 0.0,
                         color: CLOTHES[self.rng.below(8)],
-                        remove: false,
-                    });
+                        remove: false, person: crate::game::new_person(), });
                     self.msg(format!("Tu as volé un(e) {} !", kind.name().to_lowercase()));
                     self.add_wanted(1);
                 }

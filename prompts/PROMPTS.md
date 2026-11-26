@@ -1,7 +1,7 @@
 # Images à générer pour Ouaga City (GPT Image 2)
 
 Merci ! Générez chaque image avec le prompt indiqué, puis déposez-la dans le dossier
-**app/assets/user/** du projet avec **exactement le nom de fichier indiqué** (PNG).
+**C:\Users\Prince\Documents\projets\recr-er-un-jeu-comme-gta\app\assets\user** du projet avec **exactement le nom de fichier indiqué** (PNG).
 Je les intégrerai ensuite dans le jeu (façades, enseignes, sols, tissus) et je m'en servirai
 comme références pour modéliser dans Blender.
 

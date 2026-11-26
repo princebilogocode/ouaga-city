@@ -18,7 +18,7 @@ def decode(name):
         return 8.0, (1.0, 0.0, 1.0, 1.0)
     p = name.split("_")
     if p[0] == "EMIT":
-        return 30.0, (int(p[1]) / 255, int(p[2]) / 255, int(p[3]) / 255, 1.0)
+        return 40.0, (int(p[1]) / 255, int(p[2]) / 255, int(p[3]) / 255, 1.0)
     if p[0].startswith("L"):
         return float(p[0][1:]), (int(p[1]) / 255, int(p[2]) / 255, int(p[3]) / 255, 1.0)
     return 8.0, (0.8, 0.8, 0.8, 1.0)

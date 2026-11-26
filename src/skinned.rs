@@ -188,7 +188,7 @@ layout(location=2) in vec2 a_uv;
 layout(location=3) in vec4 a_joints;
 layout(location=4) in vec4 a_weights;
 uniform mat4 u_vp; uniform mat4 u_model; uniform mat4 u_lvp;
-uniform mat4 u_bones[17];
+uniform mat4 u_bones[24];
 out vec3 v_pos; out vec3 v_nrm; out vec2 v_uv; out vec4 v_sc;
 void main() {
     mat4 s = u_bones[int(a_joints.x)] * a_weights.x + u_bones[int(a_joints.y)] * a_weights.y
@@ -304,7 +304,7 @@ impl Skinned {
                 gl.bind_texture(glow::TEXTURE_2D, Some(shadow_tex));
             }
             let (lm, lb) = (l("u_model"), l("u_bones"));
-            let mut buf: Vec<f32> = Vec::with_capacity(17 * 16);
+            let mut buf: Vec<f32> = Vec::with_capacity(24 * 16);
             for i in insts {
                 let (Some(g), Some(c)) = (self.list.get(i.model), data.get(i.model)) else { continue };
                 gl.active_texture(glow::TEXTURE4);
@@ -313,10 +313,10 @@ impl Skinned {
                 gl.bind_texture(glow::TEXTURE_2D, Some(g.normal));
                 gl.uniform_matrix_4_f32_slice(lm.as_ref(), false, &i.mat.to_cols_array());
                 buf.clear();
-                for m in c.sample(i.anim, i.t).iter().take(17) {
+                for m in c.sample(i.anim, i.t).iter().take(24) {
                     buf.extend_from_slice(&m.to_cols_array());
                 }
-                while buf.len() < 17 * 16 {
+                while buf.len() < 24 * 16 {
                     buf.extend_from_slice(&Mat4::IDENTITY.to_cols_array());
                 }
                 gl.uniform_matrix_4_f32_slice(lb.as_ref(), false, &buf);

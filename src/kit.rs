@@ -50,6 +50,14 @@ const ACCENTS: [[f32; 3]; 8] = [
 /// Copy a piece into `out`: x along `xd`, y up, z along `zd`, scaled by (sx, sy).
 #[allow(clippy::too_many_arguments)]
 fn place(out: &mut Vec<f32>, piece: usize, origin: Vec3, xd: Vec3, zd: Vec3, sx: f32, sy: f32, accent: [f32; 3]) {
+    place_sign(out, piece, origin, xd, zd, sx, sy, accent, 0)
+}
+
+/// Same, choosing which painted sign goes on a shop (8 of them, from the person's images).
+#[allow(clippy::too_many_arguments)]
+fn place_sign(out: &mut Vec<f32>, piece: usize, origin: Vec3, xd: Vec3, zd: Vec3, sx: f32, sy: f32, accent: [f32; 3], sign: usize) {
+    // keep the frame right-handed so signs never read backwards
+    let xd = if xd.cross(Vec3::Y).dot(zd) < 0.0 { -xd } else { xd };
     let v = &pieces()[piece];
     out.reserve(v.len());
     for c in v.chunks(13) {
@@ -57,6 +65,13 @@ fn place(out: &mut Vec<f32>, piece: usize, origin: Vec3, xd: Vec3, zd: Vec3, sx:
         let n = (xd * (c[3] / sx) + Vec3::Y * (c[4] / sy) + zd * c[5]).normalize_or_zero();
         let paint = c[6] > 0.99 && c[7] < 0.01 && c[8] > 0.99;
         let col = if paint { [accent[0], accent[1], accent[2]] } else { [c[6], c[7], c[8]] };
+        if (c[12] - 30.0).abs() < 0.5 {
+            // sign quad: map the whole picture on it (3.4 m x 1.1 m, centred at y = 3.45)
+            let u = (c[0] + 1.7) / 3.4;
+            let vv = 1.0 - (c[1] - 2.9) / 1.1;
+            out.extend_from_slice(&[p.x, p.y, p.z, n.x, n.y, n.z, 1.0, 1.0, 1.0, 1.0, u, vv, 30.0 + (sign % 8) as f32]);
+            continue;
+        }
         out.extend_from_slice(&[p.x, p.y, p.z, n.x, n.y, n.z, col[0], col[1], col[2], c[9], c[10], c[11], c[12]]);
     }
 }
@@ -118,7 +133,7 @@ fn dress(map: &Map, b: &Building, out: &mut Vec<f32>) {
                 let c = p0 + t2 * ((k as f32 + 0.5) * tile);
                 let base = Vec3::new(c.x, fy, c.y) + zd * 0.01;
                 if f == 0 && street && shops && tile > 3.0 {
-                    place(out, BOUTIQUE, base, xd, zd, (tile / 4.0).min(1.1), 1.0, ACCENTS[(b.seed as usize + k) % ACCENTS.len()]);
+                    place_sign(out, BOUTIQUE, base, xd, zd, (tile / 4.0).min(1.1), 1.0, ACCENTS[(b.seed as usize + k) % ACCENTS.len()], b.seed as usize / 5 + k * 3);
                     continue;
                 }
                 if f == 0 && street && k == door_tile {

@@ -258,10 +258,10 @@ pub fn draw_hud(p: &Painter, h: &Hud) {
     }
     // conversation subtitles
     if let Some(t) = &g.talk {
-        let (who, line) = if t.t < 2.8 { ("Passant", t.line.as_str()) } else { ("Bila", t.reply.as_str()) };
+        let (who, line) = if t.t < 3.2 { (t.who.as_str(), t.line.as_str()) } else { ("Bila", t.reply.as_str()) };
         let text = format!("{who} : {line}");
-        let galley = p.layout_no_wrap(text.clone(), FontId::proportional(19.0), Color32::WHITE);
-        let r = Rect::from_center_size(screen.center_bottom() + vec2(0.0, -180.0), galley.size() + vec2(36.0, 18.0));
+        let galley = p.layout(text.clone(), FontId::proportional(19.0), Color32::WHITE, 900.0);
+        let r = Rect::from_center_size(screen.center_bottom() + vec2(0.0, -190.0), galley.size() + vec2(36.0, 18.0));
         p.rect_filled(r, 8.0, Color32::from_black_alpha(170));
         p.galley(r.center() - galley.size() * 0.5, galley, if who == "Bila" { Color32::from_rgb(255, 215, 90) } else { Color32::WHITE });
     }

@@ -193,6 +193,9 @@ pub struct Map {
     pub road_grid: Grid,
     pub bld_grid: Grid,
     pub tree_grid: Grid,
+    /// courtyard walls along the residential streets (solid)
+    pub walls: Vec<(Pos2, Pos2)>,
+    pub wall_grid: Grid,
     pub min: Pos2,
     pub max: Pos2,
 }
@@ -438,11 +441,28 @@ impl Map {
             road_grid,
             bld_grid: Grid::new(min, max, 40.0),
             tree_grid: Grid::new(min, max, 50.0),
+            walls: Vec::new(),
+            wall_grid: Grid::new(min, max, 40.0),
             min,
             max,
         };
         map.add_real_buildings(raw_buildings);
         map.generate_buildings();
+        let mut walls = Vec::new();
+        for (ri, r) in map.roads.iter().enumerate() {
+            if r.kind != 4 {
+                continue;
+            }
+            for si in 0..r.pts.len() - 1 {
+                for w in crate::kit::walls_for_segment(&map, ri, si) {
+                    walls.push((w.a, w.b));
+                }
+            }
+        }
+        for (i, (a, b)) in walls.iter().enumerate() {
+            map.wall_grid.insert_box(a.min(*b) - vec2(1.0, 1.0), a.max(*b) + vec2(1.0, 1.0), i as u32);
+        }
+        map.walls = walls;
         map
     }
 
@@ -506,6 +526,25 @@ impl Map {
         n
     }
 
+    /// Height of the building whose walls are within `margin` of a point (for things that stick
+    /// out of façades: awnings, signs, balconies).
+    pub fn facade_near(&self, p: Pos2, margin: f32) -> Option<f32> {
+        let mut h: Option<f32> = None;
+        let m = vec2(margin, margin);
+        self.bld_grid.query(p - m, p + m, |id| {
+            let b = &self.buildings[id as usize];
+            if p.x < b.min.x - margin || p.x > b.max.x + margin || p.y < b.min.y - margin || p.y > b.max.y + margin {
+                return;
+            }
+            let n = b.pts.len();
+            let close = (0..n).any(|i| seg_dist(p, b.pts[i], b.pts[(i + 1) % n]).0 < margin) || point_in_poly(p, &b.pts);
+            if close {
+                h = Some(h.unwrap_or(0.0).max(b.height()));
+            }
+        });
+        h
+    }
+
     /// Height of the building standing at a point, if any.
     pub fn building_height_at(&self, p: Pos2) -> Option<f32> {
         let mut h: Option<f32> = None;
@@ -516,6 +555,26 @@ impl Map {
             }
         });
         h
+    }
+
+    /// Is a 3D point inside a tree (trunk or crown)?
+    pub fn tree_blocks(&self, p: Pos2, y: f32) -> bool {
+        let mut hit = false;
+        let r = vec2(8.0, 8.0);
+        self.tree_grid.query(p - r, p + r, |id| {
+            let t = &self.trees[id as usize];
+            if hit || t.r <= 0.0 {
+                return;
+            }
+            let d = (t.p - p).length();
+            let trunk_h = if t.baobab { 5.0 + t.r * 0.4 } else { 1.8 + t.r * 0.3 };
+            if d < t.trunk + 0.3 && y < trunk_h + 0.5 {
+                hit = true;
+            } else if d < t.r * 1.05 + 0.3 && y > trunk_h - 0.6 && y < trunk_h + t.r * 1.5 {
+                hit = true;
+            }
+        });
+        hit
     }
 
     pub fn point_in_building(&self, p: Pos2) -> bool {
@@ -719,6 +778,18 @@ impl Map {
             };
             *p += w;
             total += w;
+        });
+        self.wall_grid.query(*p - vec2(r, r), *p + vec2(r, r), |id| {
+            let (a, b) = self.walls[id as usize];
+            let (d, t) = seg_dist(*p, a, b);
+            let rr = r + 0.12;
+            if d < rr {
+                let q = a + (b - a) * t;
+                let n = if d > 1e-4 { (*p - q) / d } else { vec2(-(b - a).y, (b - a).x).normalized() };
+                let w = n * (rr - d);
+                *p += w;
+                total += w;
+            }
         });
         self.tree_grid.query(*p - vec2(r, r), *p + vec2(r, r), |id| {
             let t = &self.trees[id as usize];

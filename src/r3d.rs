@@ -24,7 +24,7 @@ use std::sync::{Arc, Mutex};
 pub const FLOATS: usize = 13;
 const CHUNK: f32 = 400.0;
 const TEX: usize = 512;
-const LAYERS: usize = 21;
+const LAYERS: usize = 38;
 const SHADOW_SIZE: i32 = 2048;
 const SHADOW_HALF: f32 = 150.0;
 
@@ -44,8 +44,15 @@ pub const L_BARK: f32 = 12.0;
 pub const L_THATCH: f32 = 13.0;
 pub const L_WAX1: f32 = 14.0;
 pub const L_WAX2: f32 = 15.0;
-pub const L_EMISSIVE: f32 = 30.0;
-pub const L_SHADOW: f32 = 31.0;
+pub const L_EMISSIVE: f32 = 40.0;
+pub const L_SHADOW: f32 = 41.0;
+/// façade photos (from the person's images): ochre, pink, banco, tiles; courtyard wall; signs
+pub const L_OCRE: f32 = 21.0;
+pub const L_ROSE: f32 = 22.0;
+pub const L_BANCO: f32 = 23.0;
+pub const L_CARREAUX: f32 = 24.0;
+pub const L_CLOTURE: f32 = 25.0;
+pub const L_SIGN0: f32 = 30.0;
 /// plaster without painted windows (the windows are 3D kit pieces near the camera)
 pub const L_PLASTER: f32 = 20.0;
 
@@ -311,19 +318,38 @@ fn build_textures() -> (Vec<u8>, Vec<u8>) {
     let photos: Vec<(usize, Photo)> = vec![
         (0, photo!("sol")),
         (1, photo!("asphalte")),
-        (2, photo!("laterite")),
-        (3, photo!("mur")),
-        (4, photo!("tole")),
         (5, photo!("beton")),
         (7, photo!("herbe")),
-        (10, photo!("pave")),
         (11, photo!("vitre")),
         (12, photo!("ecorce")),
         (16, photo!("parquet")),
         (17, photo!("carrelage")),
         (18, photo!("tissu")),
         (19, photo!("bois")),
-        (20, photo!("mur")),
+        (2, Photo { color: include_bytes!("../assets/tex/u_sol_laterite.jpg"), normal: include_bytes!("../assets/tex/laterite_n.jpg") }),
+        (3, Photo { color: include_bytes!("../assets/tex/u_facade_creme.jpg"), normal: include_bytes!("../assets/tex/mur_n.jpg") }),
+        (4, Photo { color: include_bytes!("../assets/tex/u_toit_tole.jpg"), normal: include_bytes!("../assets/tex/tole_n.jpg") }),
+        (10, Photo { color: include_bytes!("../assets/tex/u_sol_trottoir.jpg"), normal: &[] }),
+        (14, Photo { color: include_bytes!("../assets/tex/u_tissu_wax_1.jpg"), normal: &[] }),
+        (15, Photo { color: include_bytes!("../assets/tex/u_tissu_wax_2.jpg"), normal: &[] }),
+        (20, Photo { color: include_bytes!("../assets/tex/u_facade_creme.jpg"), normal: include_bytes!("../assets/tex/mur_n.jpg") }),
+        (21, Photo { color: include_bytes!("../assets/tex/u_facade_ocre.jpg"), normal: include_bytes!("../assets/tex/mur_n.jpg") }),
+        (22, Photo { color: include_bytes!("../assets/tex/u_facade_rose.jpg"), normal: include_bytes!("../assets/tex/mur_n.jpg") }),
+        (23, Photo { color: include_bytes!("../assets/tex/u_facade_banco.jpg"), normal: include_bytes!("../assets/tex/mur_n.jpg") }),
+        (24, Photo { color: include_bytes!("../assets/tex/u_facade_carreaux.jpg"), normal: &[] }),
+        (25, Photo { color: include_bytes!("../assets/tex/u_mur_cloture.jpg"), normal: include_bytes!("../assets/tex/mur_n.jpg") }),
+        (26, Photo { color: include_bytes!("../assets/tex/u_tissu_faso_dan_fani_1.jpg"), normal: &[] }),
+        (27, Photo { color: include_bytes!("../assets/tex/u_tissu_faso_dan_fani_2.jpg"), normal: &[] }),
+        (28, Photo { color: include_bytes!("../assets/tex/u_tissu_bogolan.jpg"), normal: &[] }),
+        (29, Photo { color: include_bytes!("../assets/tex/u_sol_marche.jpg"), normal: &[] }),
+        (30, Photo { color: include_bytes!("../assets/tex/u_enseigne_alimentation.jpg"), normal: &[] }),
+        (31, Photo { color: include_bytes!("../assets/tex/u_enseigne_coiffure.jpg"), normal: &[] }),
+        (32, Photo { color: include_bytes!("../assets/tex/u_enseigne_maquis.jpg"), normal: &[] }),
+        (33, Photo { color: include_bytes!("../assets/tex/u_enseigne_telephonie.jpg"), normal: &[] }),
+        (34, Photo { color: include_bytes!("../assets/tex/u_enseigne_quincaillerie.jpg"), normal: &[] }),
+        (35, Photo { color: include_bytes!("../assets/tex/u_enseigne_couture.jpg"), normal: &[] }),
+        (36, Photo { color: include_bytes!("../assets/tex/u_enseigne_pharmacie.jpg"), normal: &[] }),
+        (37, Photo { color: include_bytes!("../assets/tex/u_enseigne_restaurant.jpg"), normal: &[] }),
     ];
     let mut color = vec![0u8; TEX * TEX * 4 * LAYERS];
     let mut normal = vec![0u8; TEX * TEX * 4 * LAYERS];
@@ -335,7 +361,7 @@ fn build_textures() -> (Vec<u8>, Vec<u8>) {
                 if l == 3 {
                     add_windows(&mut c);
                 }
-                (c, decode(p.normal))
+                (c, if p.normal.is_empty() { flat.clone() } else { decode(p.normal) })
             }
             None => (procedural(l), flat.clone()),
         };
@@ -408,8 +434,22 @@ fn building_mesh(mb: &mut MeshBuilder, b: &crate::map::Building) {
     let h = b.height();
     let tall = b.levels >= 5 && matches!(b.kind, 'o' | 'g' | 'h' | 'p' | 'x');
     let glass = tall && b.seed % 3 != 0;
-    let tint = if glass { rgb(200, 214, 226) } else { wall_tint(b.seed, b.kind) };
-    let wall_layer = if glass { L_GLASS } else if b.kind == 'u' { L_CONCRETE } else { L_WALL };
+    let facade = match b.kind {
+        'u' => L_BANCO,
+        'o' | 'h' | 'k' if b.seed % 2 == 0 => L_CARREAUX,
+        _ => [L_WALL, L_WALL, L_OCRE, L_ROSE, L_CARREAUX, L_BANCO, L_OCRE][(b.seed / 3) as usize % 7],
+    };
+    let facade = if facade == L_BANCO && b.levels > 1 { L_OCRE } else { facade };
+    let tint = if glass {
+        rgb(200, 214, 226)
+    } else if facade == L_WALL {
+        let t = wall_tint(b.seed, b.kind);
+        [t[0], t[1], t[2], 0.98]
+    } else {
+        let k = 0.9 + (b.seed % 7) as f32 * 0.02;
+        [k, k, k, if facade == L_BANCO && b.kind == 'u' { 1.0 } else { 0.98 }]
+    };
+    let wall_layer = if glass { L_GLASS } else { facade };
     let fl = if glass { b.levels as f32 / 3.0 } else { b.levels as f32 };
     let area2: f32 = (0..n)
         .map(|i| {
@@ -429,7 +469,7 @@ fn building_mesh(mb: &mut MeshBuilder, b: &crate::map::Building) {
         let lu = if glass { len / 6.0 } else if len > 3.0 { (len / 4.0).round().max(1.0) } else { len / 4.0 };
         mb.quad([v3(p0, 0.0), v3(p1, 0.0), v3(p1, h), v3(p0, h)], Vec3::new(nrm.x, 0.0, nrm.y), tint, [[0.0, fl], [lu, fl], [lu, 0.0], [0.0, 0.0]], wall_layer);
         if b.roof == 1 && b.kind != 'u' {
-            let pc = darker(tint, 0.95);
+            let pc = { let d = darker(tint, 0.95); [d[0], d[1], d[2], 1.0] };
             mb.quad([v3(p0, h), v3(p1, h), v3(p1, h + 0.6), v3(p0, h + 0.6)], Vec3::new(nrm.x, 0.0, nrm.y), pc, [[0.0, 0.1], [len / 4.0, 0.1], [len / 4.0, 0.0], [0.0, 0.0]], L_CONCRETE);
         }
     }
@@ -646,7 +686,7 @@ pub fn build_chunk(map: &Map, cx: i32, cz: i32) -> Vec<f32> {
         let d = (b - a) / len;
         let n = egui::vec2(-d.y, d.x);
         let y = road_y(road.kind);
-        let (layer, tint, sc) = if road.kind == 4 { (L_LATERITE, rgb(255, 214, 190), 5.0) } else { (L_ASPHALT, rgb(118, 116, 120), 6.0) };
+        let (layer, tint, sc) = if road.kind == 4 { (L_LATERITE, rgb(168, 150, 142), 5.0) } else { (L_ASPHALT, rgb(118, 116, 120), 6.0) };
         let s0: f32 = road.pts.windows(2).take(si as usize).map(|w| (w[1] - w[0]).length()).sum();
         let (v0, v1) = (s0 / sc, (s0 + len) / sc);
         let u = hw / sc;
@@ -674,7 +714,7 @@ pub fn build_chunk(map: &Map, cx: i32, cz: i32) -> Vec<f32> {
                 }
                 let c = w.a + t / len * ((s0 + s1) / 2.0);
                 let m = Mat4::from_translation(v3(c, 1.0)) * Mat4::from_rotation_y(-ang);
-                mb.cuboid_uv(&m, Vec3::new((s1 - s0) / 2.0, 1.0, 0.1), col, L_PLASTER, 3.2);
+                mb.cuboid_uv(&m, Vec3::new((s1 - s0) / 2.0, 1.0, 0.1), [col[0] * 1.05, col[1] * 1.05, col[2] * 1.05, 1.0], L_CLOTURE, 2.0);
                 let cap = Mat4::from_translation(v3(c, 2.04)) * Mat4::from_rotation_y(-ang);
                 mb.cuboid(&cap, Vec3::new((s1 - s0) / 2.0 + 0.02, 0.05, 0.14), darker(col, 0.8), L_CONCRETE);
                 // red laterite dust at the foot of the wall
@@ -1151,16 +1191,17 @@ pub fn build_scene(si: &SceneInput) -> Scene {
         if v.kind == VKind::Moto {
             insts.push(Inst { model: M_MOTO, mat: base, phase: 0.0, moving: 0.0, seated: false, tint: if v.dead { [0.25, 0.22, 0.2] } else { white }, aim: false });
             if v.driver != Driver::None && !v.dead && (player_in || g.player.vehicle != Some(i)) {
-                let who = if g.player.vehicle == Some(i) { C_BILA } else { person_model(i as u32 * 7 + 3) };
-                chars.push(CInst { model: who, mat: base * Mat4::from_translation(Vec3::new(-0.3, 0.2, 0.0)), anim: Anim::Ride, t: 0.0 });
+                let who = if g.player.vehicle == Some(i) { C_BILA } else { crate::people::model_of(v.person) };
+                chars.push(CInst { model: who, mat: base * Mat4::from_translation(Vec3::new(-0.3, 0.12, 0.0)), anim: Anim::Ride, t: 0.0 });
             }
         } else {
             let paint = if v.dead { [0.08, 0.07, 0.07] } else { let c = rgba(v.color, 1.0); [c[0], c[1], c[2]] };
             let steer = if player_in { si.steer } else { 0.0 };
             cars.push(CarInst { mesh: car_mesh(v.kind), mat: base, paint, spin: g.time * v.speed() / 0.34, steer });
             if v.driver != Driver::None && !v.dead && (player_in || g.player.vehicle != Some(i)) {
-                let who = if g.player.vehicle == Some(i) { C_BILA } else { person_model(i as u32 * 7 + 3) };
-                let seat = if v.kind == VKind::Minibus { Vec3::new(1.9, 0.62, -0.45) } else { Vec3::new(0.05, 0.08, -0.38) };
+                let who = if g.player.vehicle == Some(i) { C_BILA } else { crate::people::model_of(v.person) };
+                // seated low behind the wheel so the head stays under the roof
+                let seat = if v.kind == VKind::Minibus { Vec3::new(1.85, 0.05, -0.45) } else { Vec3::new(-0.05, -0.5, -0.38) };
                 chars.push(CInst { model: who, mat: base * Mat4::from_translation(seat), anim: Anim::Drive, t: 0.0 });
             }
         }
@@ -1178,7 +1219,7 @@ pub fn build_scene(si: &SceneInput) -> Scene {
         if !near(p.pos) {
             continue;
         }
-        let model = person_model(i as u32 * 13 + p.color.r() as u32 * 7 + p.color.g() as u32);
+        let model = crate::people::model_of(p.person);
         if p.down > 0.0 {
             let m = Mat4::from_translation(v3(p.pos, 0.2)) * Mat4::from_rotation_y(-p.angle) * Mat4::from_rotation_z(FRAC_PI_2);
             chars.push(CInst { model, mat: m, anim: Anim::Idle, t: 0.0 });
@@ -1284,7 +1325,7 @@ pub fn build_scene(si: &SceneInput) -> Scene {
     }
     if g.inside.is_none() {
         for d in &g.doors {
-            if near(d.pos) {
+            if near(d.pos) && (d.pos - si.cam).length() > 2.5 {
                 tr.cylinder(v3(d.pos, 0.0), 1.6, 1.6, 2.2, 20, [0.75, 0.45, 1.0, 0.28], L_EMISSIVE, false);
                 let m = Mat4::from_translation(v3(d.pos, 2.9 + pulse * 0.2)) * Mat4::from_rotation_y(g.time * 1.5);
                 op.cuboid(&m, Vec3::new(0.35, 0.35, 0.06), [0.8, 0.5, 1.0, 1.0], L_EMISSIVE);
@@ -1397,6 +1438,7 @@ uniform sampler2DArray u_nrm;
 uniform sampler2DShadow u_shadow;
 uniform vec3 u_cam; uniform vec3 u_sun; uniform vec3 u_sun_col; uniform vec3 u_amb; uniform vec3 u_fogc;
 uniform float u_fog; uniform float u_night; uniform float u_texel;
+uniform vec3 u_focus;
 in vec3 v_pos; in vec3 v_nrm; in vec4 v_col; in vec2 v_uv; in float v_layer; in vec4 v_sc;
 out vec4 frag;
 vec3 fogit(vec3 c) {
@@ -1427,9 +1469,24 @@ vec3 perturb(vec3 N, vec3 nm) {
 }
 void main() {
     float L = floor(v_layer + 0.5);
-    if (L > 30.5) { frag = vec4(0.0, 0.0, 0.0, v_col.a * (1.0 - u_night * 0.6)); return; }
-    if (L > 29.5) { frag = vec4(fogit(v_col.rgb * (1.0 + u_night * 0.5)), v_col.a); return; }
+    // foliage and trunks between the camera and Bila become see-through (dithered)
+    if (L == 9.0 || L == 12.0 || L == 4.0 || L == 19.0) {
+        vec3 ab = u_focus - u_cam;
+        float k = clamp(dot(v_pos - u_cam, ab) / max(dot(ab, ab), 1e-4), 0.0, 1.0);
+        float d = length(u_cam + ab * k - v_pos);
+        if (d < 2.6) {
+            float dither = fract(sin(dot(floor(gl_FragCoord.xy), vec2(12.9898, 78.233))) * 43758.5453);
+            if (dither > (d - 1.2) / 1.4) discard;
+        }
+    }
+    if (L > 40.5) { frag = vec4(0.0, 0.0, 0.0, v_col.a * (1.0 - u_night * 0.6)); return; }
+    if (L > 39.5) { frag = vec4(fogit(v_col.rgb * (1.0 + u_night * 0.5)), v_col.a); return; }
     vec4 t = texture(u_tex, vec3(v_uv, L));
+    bool windowed = v_col.a > 0.5 && v_col.a < 0.99;
+    if (windowed) {
+        vec4 w = texture(u_tex, vec3(v_uv, 3.0));
+        if (w.a < 0.5) t = vec4(w.rgb, 0.0);
+    }
     vec3 N = normalize(v_nrm);
     vec3 nm = texture(u_nrm, vec3(v_uv, L)).xyz * 2.0 - 1.0;
     if (L == 4.0) nm.xy *= 1.6;
@@ -1451,7 +1508,7 @@ void main() {
         vec3 h = normalize(v + u_sun);
         col += u_sun_col * ks * pow(max(dot(n, h), 0.0), shin) * sh;
     }
-    if (((L == 3.0) && t.a < 0.5) || (L == 11.0 && t.b > t.r * 1.05)) {
+    if (((L == 3.0 || windowed) && t.a < 0.5) || (L == 11.0 && t.b > t.r * 1.05)) {
         float r = fract(sin(dot(floor(v_uv) + floor(v_pos.xz * 0.07), vec2(12.9898, 78.233))) * 43758.5453);
         if (r < 0.55) col += vec3(1.0, 0.78, 0.45) * u_night * 0.9;
         col += u_fogc * 0.1 * (1.0 - u_night);
@@ -1474,7 +1531,7 @@ const SFS: &str = r#"
 precision highp float;
 in float v_layer;
 out vec4 frag;
-void main() { if (v_layer > 29.5) discard; frag = vec4(1.0); }
+void main() { if (v_layer > 39.5) discard; frag = vec4(1.0); }
 "#;
 
 const SKY_VS: &str = r#"
@@ -1801,6 +1858,7 @@ impl R3D {
             gl.uniform_1_f32(loc("u_fog").as_ref(), fd.fog);
             gl.uniform_1_f32(loc("u_night").as_ref(), fd.night);
             gl.uniform_1_f32(loc("u_texel").as_ref(), 1.0 / SHADOW_SIZE as f32);
+            gl.uniform_3_f32(loc("u_focus").as_ref(), fd.focus.x, fd.focus.y + 0.6, fd.focus.z);
             gl.active_texture(glow::TEXTURE0);
             gl.bind_texture(glow::TEXTURE_2D_ARRAY, Some(self.tex));
             gl.uniform_1_i32(loc("u_tex").as_ref(), 0);

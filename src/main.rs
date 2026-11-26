@@ -9,6 +9,7 @@ mod skinned;
 mod statics;
 mod map;
 mod models;
+mod people;
 mod net;
 mod r3d;
 mod render;
@@ -60,6 +61,7 @@ struct App {
     was_aiming: bool,
     fov: f32,
     steer: f32,
+    pitch: f32,
     bila_face: Option<egui::TextureHandle>,
     bila_full: Option<egui::TextureHandle>,
     menu_sky: Option<egui::TextureHandle>,
@@ -119,6 +121,7 @@ impl App {
             was_aiming: false,
             fov: 62.0,
             steer: 0.0,
+            pitch: 0.12,
             bila_face: None,
             bila_full: None,
             menu_sky: None,
@@ -136,6 +139,15 @@ impl App {
                         let ang = v.get(2).copied().unwrap_or(0.0);
                         g.place_player(&app.map, at, ang);
                         app.cam_yaw = ang;
+                        if std::env::var("OC_CAR").is_ok() {
+                            let ahead = at + egui::vec2(ang.cos(), ang.sin()) * 7.0;
+                            g.spawn_vehicle(&app.map, ahead, game::VKind::Taxi, game::Driver::Traffic, Color32::from_rgb(30, 140, 60), 9);
+                            if let Some(v) = g.vehicles.last_mut() {
+                                v.route = None;
+                                v.pos = ahead + egui::vec2(-ang.sin(), ang.cos()) * 3.0;
+                                v.angle = ang + 0.5;
+                            }
+                        }
                     }
                 }
                 // test hook: OC_INSIDE=<room> [OC_ACT=<spot name>]
@@ -316,7 +328,7 @@ impl App {
             });
     }
 
-    fn read_input(&self, ctx: &egui::Context) -> (Input, [bool; 7], f32, f32, bool, f32) {
+    fn read_input(&self, ctx: &egui::Context) -> (Input, [bool; 7], f32, (f32, f32), bool, f32) {
         ctx.input(|i| {
             let k = |a: Key, b: Key, c: Key| i.key_down(a) || i.key_down(b) || i.key_down(c);
             let inp = Input {
@@ -344,10 +356,11 @@ impl App {
             };
             let aiming = i.pointer.secondary_down() || i.key_down(Key::V);
             let drag = if i.pointer.primary_down() && !aiming { i.pointer.delta().x } else { 0.0 };
+            let drag_y = if i.pointer.primary_down() && !aiming { i.pointer.delta().y } else { 0.0 };
             let aim_dx = if aiming { i.pointer.delta().x } else { 0.0 };
             let advance = i.key_pressed(Key::Enter) || i.key_pressed(Key::Space) || i.pointer.primary_clicked();
             let keys = [i.key_pressed(Key::M), i.key_pressed(Key::Escape), i.key_pressed(Key::C), i.key_pressed(Key::E), i.key_pressed(Key::B), i.key_pressed(Key::Tab), i.key_pressed(Key::T)];
-            (inp, keys, i.smooth_scroll_delta.y, drag, advance, aim_dx)
+            (inp, keys, i.smooth_scroll_delta.y, (drag, drag_y), advance, aim_dx)
         })
     }
 
@@ -355,7 +368,7 @@ impl App {
         let ctx = ui.ctx().clone();
         let screen = ui.max_rect();
         let dt = if self.shot.is_some() { 1.0 / 60.0 } else { ctx.input(|i| i.stable_dt).min(0.05) };
-        let (mut inp, [map_key, esc, cam_key, buy_key, emp_key, tab_key, talk_key], scroll, drag, advance, aim_dx) = self.read_input(&ctx);
+        let (mut inp, [map_key, esc, cam_key, buy_key, emp_key, tab_key, talk_key], scroll, (drag, drag_y), advance, aim_dx) = self.read_input(&ctx);
         if self.shot.is_some() {
             if std::env::args().any(|a| a == "--aim") {
                 inp = Input { action: self.frame == 3, aim: self.frame > 20 && std::env::var("OC_NOAIM").is_err(), fire: std::env::var("OC_FIRE").is_ok() && self.frame > 60 && self.frame % 12 == 0, switch: if self.frame == 5 && std::env::var("OC_W0").is_err() { Some(1) } else { None }, ..Default::default() };
@@ -479,8 +492,12 @@ impl App {
             None => (0.0, game.player.angle),
         };
         self.orbit += drag * 0.008;
-        if drag == 0.0 {
+        self.pitch = (self.pitch + drag_y * 0.004).clamp(-0.35, 0.9);
+        // the camera only swings back behind Bila once he moves
+        let moving = game.player.moving > 0.1 || game.player.vehicle.is_some_and(|v| game.vehicles[v].speed().abs() > 1.5);
+        if drag == 0.0 && moving {
             self.orbit *= (-dt * 0.8).exp();
+            self.pitch *= (-dt * 0.6).exp();
         }
         let mut d = heading - self.cam_yaw;
         while d > std::f32::consts::PI {
@@ -506,11 +523,12 @@ impl App {
         } else if in_vehicle {
             (7.5 + speed.abs() * 0.1, 2.8 + speed.abs() * 0.03)
         } else {
-            (4.2, 1.9)
+            (5.2, 1.6)
         };
-        let focus = Vec3::new(pp.x, if in_vehicle { 1.3 } else { 1.55 }, pp.y);
+        let height = height + self.pitch * dist;
+        let focus = Vec3::new(pp.x, if in_vehicle { 1.3 } else { 1.15 }, pp.y);
         let mut eye = if game.aiming {
-            focus - fwd * 2.6 + right * 0.6 + Vec3::Y * 0.25
+            focus - fwd * 2.6 + right * 0.6 + Vec3::Y * 0.65
         } else {
             focus - fwd * dist * self.dist_mul + Vec3::Y * height * self.dist_mul.sqrt()
         };
@@ -520,8 +538,10 @@ impl App {
         for k in 1..=24 {
             let s = k as f32 / 24.0;
             let q = focus + (eye - focus) * s;
-            if map.building_height_at(Pos2::new(q.x, q.z)).is_some_and(|h| q.y < h) {
-                reach = ((k - 1) as f32 / 24.0 - 0.03).max(0.12);
+            let q2 = Pos2::new(q.x, q.z);
+            let protrusion = q.y > 2.2 && q.y < 4.6 && k > 2 && map.facade_near(q2, 2.4).is_some_and(|h| h > 2.8);
+            if map.building_height_at(q2).is_some_and(|h| q.y < h) || protrusion {
+                reach = ((k - 1) as f32 / 24.0 - 0.03).max(0.3);
                 break;
             }
         }
@@ -562,7 +582,7 @@ impl App {
             _ => eye,
         };
         self.cam_pos = Some(eye);
-        let look = if game.aiming { focus + fwd * 25.0 + right * 0.6 } else { focus + fwd * 3.0 };
+        let look = if game.aiming { focus + Vec3::Y * 0.4 + fwd * 25.0 + right * 0.6 } else if in_vehicle { focus + fwd * 3.0 } else { focus + Vec3::Y * 0.2 + fwd * 1.5 };
         let aspect = screen.width() / screen.height().max(1.0);
         // a wider field of view at speed, as in the big open-world games
         let target_fov = if in_vehicle { 60.0 + (speed.abs() * 0.45).min(16.0) } else if game.aiming { 52.0 } else { 62.0 };

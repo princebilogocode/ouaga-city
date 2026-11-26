@@ -484,8 +484,7 @@ impl Story {
                             flee: 0.0,
                             down: 20.0,
                             color: Color32::from_rgb(30, 30, 30),
-                            remove: false,
-                        });
+                            remove: false, person: crate::game::new_person(), });
                         g.msg("Tu les as eus ! La recette est récupérée.");
                     }
                 }

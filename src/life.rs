@@ -74,8 +74,8 @@ impl Game {
         }
         if self.player.vehicle.is_none() {
             if let Some(i) = self.ped_in_front(2.6) {
-                let _ = i;
-                return Some("T : parler à cette personne".into());
+                let who = crate::people::person(self.peds[i].person);
+                return Some(format!("T : parler à {} ({})", who.name, who.job));
             }
         }
         None
@@ -201,11 +201,14 @@ impl Game {
             return;
         }
         if let Some(i) = self.ped_in_front(2.6) {
-            let line = GREETINGS[self.rng.below(GREETINGS.len())].to_string();
+            let who = crate::people::person(self.peds[i].person);
+            let greet = GREETINGS[self.rng.below(GREETINGS.len())];
+            let line = format!("{greet} {}", who.line);
             let reply = REPLIES[self.rng.below(REPLIES.len())].to_string();
             let d = self.player.pos - self.peds[i].pos;
             self.peds[i].angle = d.y.atan2(d.x);
-            self.talk = Some(Talk { ped: i, t: 0.0, line, reply });
+            self.msg(format!("{} — {}", who.name, who.story));
+            self.talk = Some(Talk { ped: i, who: format!("{} ({} ans, {})", who.name, who.age, who.job), t: 0.0, line, reply });
         }
     }
 

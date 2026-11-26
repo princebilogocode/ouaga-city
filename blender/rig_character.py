@@ -68,6 +68,7 @@ for sg, n in ((1, "L"), (-1, "R")):
     J["shoulder" + n] = sh
     J["elbow" + n] = sh + d * 0.47 + Vector((-0.012 * H, 0, 0))
     J["wrist" + n] = sh + d * 0.83
+    J["knuckle" + n] = sh + d * 0.91
     J["tip" + n] = tip
     foot = side_pts(sg, lambda c: c.z < 0.06 * H)
     fy = sum(c.y for c in foot) / max(1, len(foot))
@@ -88,7 +89,8 @@ for n in ("L", "R"):
     BONES += [
         ("upperarm" + n, "shoulder" + n, "elbow" + n, "chest"),
         ("forearm" + n, "elbow" + n, "wrist" + n, "upperarm" + n),
-        ("hand" + n, "wrist" + n, "tip" + n, "forearm" + n),
+        ("hand" + n, "wrist" + n, "knuckle" + n, "forearm" + n),
+        ("fingers" + n, "knuckle" + n, "tip" + n, "hand" + n),
         ("thigh" + n, "hipj" + n, "knee" + n, "hips"),
         ("shin" + n, "knee" + n, "ankle" + n, "thigh" + n),
         ("foot" + n, "ankle" + n, "toe" + n, "shin" + n),
@@ -131,7 +133,7 @@ def geometric_weights(p):
     sg = 1 if p.y >= 0 else -1
     n = "L" if sg > 0 else "R"
     if sg * p.y > 0.115 * H and p.z > 0.36 * H:
-        cand = ["upperarm" + n, "forearm" + n, "hand" + n, "chest"]
+        cand = ["upperarm" + n, "forearm" + n, "hand" + n, "fingers" + n, "chest"]
     elif p.z < 0.5 * H:
         cand = ["thighL", "shinL", "footL", "thighR", "shinR", "footR", "hips"]
     else:
@@ -167,7 +169,15 @@ def arm_down(n):
     a = math.degrees(math.atan2(sg * d.y, -d.z))
     return -sg * (a - 6.0)
 
+CURL = {"L": 22.0, "R": 22.0}
+
+
 def pose(rot, root=Vector((0, 0, 0))):
+    for n, sg in (("L", 1), ("R", -1)):
+        if "fingers" + n not in rot:
+            rot["fingers" + n] = R("X", -sg * CURL[n])
+        if "hand" + n not in rot:
+            rot["hand" + n] = R("X", -sg * CURL[n] * 0.35)
     D = {}
     for name, h, t, parent in BONES:
         hp = J[h]
@@ -217,7 +227,7 @@ def anim_run(t):
     return pose(rot, Vector((0, 0, -0.03 * H + 0.03 * H * abs(math.sin(ph)))))
 
 def anim_aim(t):
-    rot = {}
+    rot = {"fingersR": R("X", 75), "fingersL": R("X", -60)}
     b = math.sin(t * 2 * math.pi)
     base_arms(rot, 55, 0, 70, 0)
     # right arm straight forward, left hand supporting
@@ -230,7 +240,7 @@ def anim_aim(t):
     return pose(rot)
 
 def anim_ride(t):
-    rot = {}
+    rot = {"fingersR": R("X", 80), "fingersL": R("X", -80)}
     base_arms(rot, 62, 62, 28, 28)
     legs(rot, 78, 78, 95, 95, -15, -15)
     rot["spine"] = R("Y", 18)
@@ -238,7 +248,7 @@ def anim_ride(t):
     return pose(rot)
 
 def anim_drive(t):
-    rot = {}
+    rot = {"fingersR": R("X", 75), "fingersL": R("X", -75)}
     base_arms(rot, 55, 55, 45, 45)
     legs(rot, 88, 88, 80, 80)
     rot["spine"] = R("Y", -6)
@@ -253,7 +263,7 @@ def anim_sit(t):
     return pose(rot)
 
 def anim_eat(t):
-    rot = {}
+    rot = {"fingersR": R("X", 55)}
     k = max(0.0, math.sin(t * 2 * math.pi)) ** 0.7
     base_arms(rot, 22, 25 + 45 * k, 55, 60 + 85 * k)
     rot["upperarmR"] = R("Z", 25 * k) @ rot["upperarmR"]
@@ -270,7 +280,7 @@ def anim_squat(t):
     return pose(rot, Vector((0.0, 0, -0.27 * H * k)))
 
 def anim_punch(t):
-    rot = {}
+    rot = {"fingersR": R("X", 100), "fingersL": R("X", -100)}
     k = math.sin(min(1.0, t * 2.0) * math.pi)
     base_arms(rot, 50, 20 + 70 * k, 110, 100 - 95 * k)
     rot["chest"] = R("Z", 25 * k)
@@ -278,7 +288,7 @@ def anim_punch(t):
     return pose(rot)
 
 def anim_talk(t):
-    rot = {}
+    rot = {"fingersR": R("X", 10 + 25 * (0.5 + 0.5 * math.sin(t * 6 * math.pi))), "fingersL": R("X", -15)}
     a = math.sin(t * 2 * math.pi)
     c = math.sin(t * 4 * math.pi + 1)
     base_arms(rot, 18 + 14 * a, 24 + 18 * c, 45 + 25 * a, 60 + 30 * c)
