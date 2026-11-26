@@ -1,0 +1,575 @@
+{
+  "source": "PROMPTS_2.md",
+  "generationTool": "built-in image_gen",
+  "outputDirectory": "app/assets/user",
+  "assets": [
+    {
+      "name": "bila_base.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-79768006-850f-4568-bc14-14cbaa643575.png",
+      "prompt": "Use case: identity-preserve. Create ONE standalone full-body image of Bila for image-to-3D reconstruction. The attached sheet is an IDENTITY reference ONLY. Preserve the same man's face, facial features, hairstyle, adult age 25, very dark skin, slim body and realistic proportions. Full-body A-pose photo of Bila, a slim young Black man from Burkina Faso, 25, very dark ebony skin, short black hair, wearing only plain dark grey boxer shorts, arms 30 degrees away from the body, legs slightly apart, five separated fingers on each hand, plain light grey background, realistic. Exactly one person in the final image, ONE FRONT VIEW ONLY, NOT a turnaround or collage. Head to toes including both hands and all feet entirely inside frame with margin. Precise symmetric A-pose: arms angled 30 degrees away from torso, legs slightly apart, palms oriented toward thighs, five clearly defined separated fingers per hand. Plain light grey seamless studio background. Soft even light without cast shadows. Photorealistic, no logos, text, watermark or jewellery. Plain opaque dark grey boxer shorts fully covering pelvis. Square 1024x1024.",
+      "requestedPrompt": "Full-body A-pose photo of Bila, a slim young Black man from Burkina Faso, 25, very dark ebony skin, short black hair, wearing only plain dark grey boxer shorts, arms 30 degrees away from the body, legs slightly apart, five separated fingers on each hand, plain light grey background, realistic"
+    },
+    {
+      "name": "bila_fasodanfani.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-81490d22-dfb2-4ca0-a6a0-fa034e86f7cf.png",
+      "prompt": "Create ONE standalone production game asset intended as bila_fasodanfani.png. Same man, same A-pose, wearing a tailored long-sleeved shirt of Faso Dan Fani handwoven cloth (indigo, white and red stripes), beige trousers, leather sandals\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage. Edit the attached reference: preserve EXACT same Bila identity, face, hairstyle, skin tone, slim body proportions, pose, scale, camera and background. Change ONLY clothing and requested accessories. Same adult 25-year-old man. Do not expose underwear in clothed variants.",
+      "requestedPrompt": "Same man, same A-pose, wearing a tailored long-sleeved shirt of Faso Dan Fani handwoven cloth (indigo, white and red stripes), beige trousers, leather sandals"
+    },
+    {
+      "name": "bila_mecano.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-f56dca77-fb29-4444-8a08-11a0fd4470fe.png",
+      "prompt": "Create ONE standalone production game asset intended as bila_mecano.png. Same man, same A-pose, wearing dark blue mechanic overalls with grease stains, work boots, a rag in the back pocket\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage. Edit the attached reference: preserve EXACT same Bila identity, face, hairstyle, skin tone, slim body proportions, pose, scale, camera and background. Change ONLY clothing and requested accessories. Same adult 25-year-old man. Do not expose underwear in clothed variants.",
+      "requestedPrompt": "Same man, same A-pose, wearing dark blue mechanic overalls with grease stains, work boots, a rag in the back pocket"
+    },
+    {
+      "name": "bila_sport.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-0747fe86-a95c-438b-b1c6-ff0fdcc8aeec.png",
+      "prompt": "Edit ONLY the shoes in this game character image: remove EVERY yellow swoosh, logo, check-shaped emblem, lettering and brand-like symbol from BOTH shoe tongues and BOTH shoe sides. Replace each mark with plain uninterrupted black shoe fabric. Keep the shoe shape, laces and plain yellow sole accents. Preserve absolutely everything else pixel-faithfully: exact same man's identity, face, hairstyle, skin, body, A-pose, green and yellow jersey, black shorts, background, framing, lighting and resolution. One full person centered head to toe, square 1024x1024. No new text, logos or emblems.",
+      "requestedPrompt": "Same man, same A-pose, wearing a green and yellow football jersey, black sports shorts, running shoes"
+    },
+    {
+      "name": "bila_decontracte.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-d8704905-aa04-4740-a6c4-2959db3dec6f.png",
+      "prompt": "Create ONE standalone production game asset intended as bila_decontracte.png. Same man, same A-pose, wearing a white T-shirt, blue jeans and white sneakers\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage. Edit the attached reference: preserve EXACT same Bila identity, face, hairstyle, skin tone, slim body proportions, pose, scale, camera and background. Change ONLY clothing and requested accessories. Same adult 25-year-old man. Do not expose underwear in clothed variants.",
+      "requestedPrompt": "Same man, same A-pose, wearing a white T-shirt, blue jeans and white sneakers"
+    },
+    {
+      "name": "bila_boubou.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-6d20ebd0-1510-465c-b698-7d2e18f046c0.png",
+      "prompt": "Create ONE standalone production game asset intended as bila_boubou.png. Same man, same A-pose, wearing an elegant light blue embroidered grand boubou with matching trousers and a kufi cap\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage. Edit the attached reference: preserve EXACT same Bila identity, face, hairstyle, skin tone, slim body proportions, pose, scale, camera and background. Change ONLY clothing and requested accessories. Same adult 25-year-old man. Do not expose underwear in clothed variants.",
+      "requestedPrompt": "Same man, same A-pose, wearing an elegant light blue embroidered grand boubou with matching trousers and a kufi cap"
+    },
+    {
+      "name": "bila_soiree.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-d6b731ab-4ef3-48f3-a203-63e9541a131e.png",
+      "prompt": "Create ONE standalone production game asset intended as bila_soiree.png. Same man, same A-pose, wearing a black tuxedo with a bow tie for a gala night\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage. Edit the attached reference: preserve EXACT same Bila identity, face, hairstyle, skin tone, slim body proportions, pose, scale, camera and background. Change ONLY clothing and requested accessories. Same adult 25-year-old man. Do not expose underwear in clothed variants.",
+      "requestedPrompt": "Same man, same A-pose, wearing a black tuxedo with a bow tie for a gala night"
+    },
+    {
+      "name": "bila_taxi_moto.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-aea6db1c-a7c9-478d-8c5c-aed316494572.png",
+      "prompt": "Create ONE standalone production game asset intended as bila_taxi_moto.png. Same man, same A-pose, wearing a yellow high-visibility vest over a polo shirt, cargo trousers, an open-face motorcycle helmet held under one arm\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage. Edit the attached reference: preserve EXACT same Bila identity, face, hairstyle, skin tone, slim body proportions, pose, scale, camera and background. Change ONLY clothing and requested accessories. Same adult 25-year-old man. Do not expose underwear in clothed variants.",
+      "requestedPrompt": "Same man, same A-pose, wearing a yellow high-visibility vest over a polo shirt, cargo trousers, an open-face motorcycle helmet held under one arm"
+    },
+    {
+      "name": "pnj_issouf.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-0c94570b-7538-42e3-973b-d02716c7cbab.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_issouf.png. Issouf, 28, cheerful Burkinabe man, small moustache, green and white Faso Dan Fani shirt, jeans, sandals\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Issouf, 28, cheerful Burkinabe man, small moustache, green and white Faso Dan Fani shirt, jeans, sandals"
+    },
+    {
+      "name": "pnj_kabore.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-5ca76086-71d4-4d71-aa97-0ffc6fcbf12f.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_kabore.png. Madame Kaboré, 52, elegant powerful businesswoman, golden and indigo wax dress with a tall matching headwrap, gold jewellery\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Madame Kaboré, 52, elegant powerful businesswoman, golden and indigo wax dress with a tall matching headwrap, gold jewellery"
+    },
+    {
+      "name": "pnj_awa.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-bd87c6b1-5a15-4d6d-b3b8-4f5cd58b7866.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_awa.png. Awa, 30, logistics engineer, braided hair tied back, royal blue blouse, black trousers, flat shoes, a tablet in her hand\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Awa, 30, logistics engineer, braided hair tied back, royal blue blouse, black trousers, flat shoes, a tablet in her hand"
+    },
+    {
+      "name": "pnj_commandant.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-b23decb4-3bcc-408f-bdd2-1722ba7cce01.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_commandant.png. The Commandant, 45, gang boss, shaved head, black leather jacket, dark shirt, gold chain, cargo trousers, boots\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "The Commandant, 45, gang boss, shaved head, black leather jacket, dark shirt, gold chain, cargo trousers, boots"
+    },
+    {
+      "name": "pnj_vautour_1.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-1383ea48-1b31-4231-9193-13a33620b9d4.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_vautour_1.png. Young gang member of the Vautours, 22, red bandana, sleeveless black top, ripped jeans, sneakers\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Young gang member of the Vautours, 22, red bandana, sleeveless black top, ripped jeans, sneakers"
+    },
+    {
+      "name": "pnj_vautour_2.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-d4ffe07f-a21d-4810-8280-c53093de36ed.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_vautour_2.png. Gang member, 26, sunglasses on the head, camouflage jacket, black trousers, boots\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Gang member, 26, sunglasses on the head, camouflage jacket, black trousers, boots"
+    },
+    {
+      "name": "pnj_policier.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-5e0aaa73-203f-4d8b-b5a2-64ec5e653df3.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_policier.png. Burkinabe traffic police officer, 35, khaki uniform, white belt and white gloves, beret (no real insignia)\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Burkinabe traffic police officer, 35, khaki uniform, white belt and white gloves, beret (no real insignia)"
+    },
+    {
+      "name": "pnj_vendeuse_beignets.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-bfd1d0ab-285a-49d4-a556-8700b7777bf1.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_vendeuse_beignets.png. Street food seller, 40, colourful wax pagne and headwrap, apron, carrying a large aluminium basin\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Street food seller, 40, colourful wax pagne and headwrap, apron, carrying a large aluminium basin"
+    },
+    {
+      "name": "pnj_mecanicien.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-37a5f875-47a3-485c-a82c-f272aec15d99.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_mecanicien.png. Motorbike mechanic, 30, oil-stained grey T-shirt and trousers, spanner in hand\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Motorbike mechanic, 30, oil-stained grey T-shirt and trousers, spanner in hand"
+    },
+    {
+      "name": "pnj_etudiante.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-56ae846b-013e-4192-bc4f-ca3c4ca52c2e.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_etudiante.png. University student, 21, braids, purple T-shirt, jeans, backpack\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "University student, 21, braids, purple T-shirt, jeans, backpack"
+    },
+    {
+      "name": "pnj_imam.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-fa3fbde3-de57-4986-9d2c-8c9a1bb56f56.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_imam.png. Elderly imam, 65, white grand boubou, white kufi, prayer beads, grey beard\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Elderly imam, 65, white grand boubou, white kufi, prayer beads, grey beard"
+    },
+    {
+      "name": "pnj_pretre.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-4293dfa1-7d69-4ff9-8aac-37609eb55ac6.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_pretre.png. Catholic priest, 50, white cassock with a green stole\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Catholic priest, 50, white cassock with a green stole"
+    },
+    {
+      "name": "pnj_infirmiere.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-c6078411-7100-426f-b8d4-ca0d67f721b2.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_infirmiere.png. Nurse of the CHU Yalgado, 33, white uniform, stethoscope, short hair\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Nurse of the CHU Yalgado, 33, white uniform, stethoscope, short hair"
+    },
+    {
+      "name": "pnj_ecolier.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-5b69bb39-1d20-4381-b117-54202360bec8.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_ecolier.png. Schoolboy, 10, khaki school uniform (shirt and shorts), small backpack, sandals\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Schoolboy, 10, khaki school uniform (shirt and shorts), small backpack, sandals"
+    },
+    {
+      "name": "pnj_grand_mere.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-e9fe4ba3-5521-4fa4-a727-9f77719e2f26.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_grand_mere.png. Grandmother, 75, faded wax pagne, headscarf, walking stick\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Grandmother, 75, faded wax pagne, headscarf, walking stick"
+    },
+    {
+      "name": "pnj_vigile.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-c7d36d49-fb04-4f40-a728-35cf43d52ee3.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_vigile.png. Security guard, 40, dark blue uniform, cap, torch on the belt\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Security guard, 40, dark blue uniform, cap, torch on the belt"
+    },
+    {
+      "name": "pnj_macon.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-c34900a1-b95b-400d-b968-60dc800e68f4.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_macon.png. Construction worker, 28, dusty blue overalls, yellow hard hat, gloves\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Construction worker, 28, dusty blue overalls, yellow hard hat, gloves"
+    },
+    {
+      "name": "pnj_coiffeuse.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-aa262b07-b4d5-4e81-b6c2-5356ab35dd5d.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_coiffeuse.png. Hairdresser, 27, long braids, pink blouse with an apron, comb in hand\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Hairdresser, 27, long braids, pink blouse with an apron, comb in hand"
+    },
+    {
+      "name": "pnj_griot.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-b1c7225a-cabb-4511-a105-5c7731db37eb.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_griot.png. Griot musician, 55, colourful embroidered boubou, carrying a kora\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Griot musician, 55, colourful embroidered boubou, carrying a kora"
+    },
+    {
+      "name": "pnj_homme_affaires.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-5d13227c-124f-4e64-bfd4-cb3e222da235.png",
+      "prompt": "Create ONE standalone production game asset intended as pnj_homme_affaires.png. Businessman of Ouaga 2000, 45, navy suit, light blue shirt, leather briefcase\nPhotorealistic full-body studio photo, exactly ONE person, entire head and all feet and both hands visible with margin, centered, strictly front-facing. Square 1024x1024. A-pose: both arms angled 30 degrees away from body, palms toward thighs, legs slightly apart. Natural anatomically correct hands with five separated fingers on each hand. Plain uniform light grey background, soft even neutral lighting, no cast shadows. No logos, text, watermark or real insignia. All characters are Black Burkinabe people of the specified age and gender. Any props must remain fully inside frame and may require a minimal adjustment of one hand; retain the A-pose as closely as possible. No second view or collage.",
+      "requestedPrompt": "Businessman of Ouaga 2000, 45, navy suit, light blue shirt, leather briefcase"
+    },
+    {
+      "name": "moto_125_rouge.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-e600b845-b97f-4635-9c59-8417b962e115.png",
+      "prompt": "Create ONE standalone production game asset intended as moto_125_rouge.png. Realistic 125cc commuter motorcycle, red tank, chrome exhaust, rear luggage rack, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Realistic 125cc commuter motorcycle, red tank, chrome exhaust, rear luggage rack, no brand"
+    },
+    {
+      "name": "moto_125_noire.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-7d15ee43-8797-448e-9753-b0a645b190ef.png",
+      "prompt": "Create ONE standalone production game asset intended as moto_125_noire.png. Realistic 110cc underbone moped-style motorcycle, black and silver plastic body, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Realistic 110cc underbone moped-style motorcycle, black and silver plastic body, no brand"
+    },
+    {
+      "name": "moto_scooter_blanc.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-13643330-3ca4-4dd4-abfe-1b1c88edd8ae.png",
+      "prompt": "Create ONE standalone production game asset intended as moto_scooter_blanc.png. Realistic white step-through scooter with a front basket, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Realistic white step-through scooter with a front basket, no brand"
+    },
+    {
+      "name": "moto_scooter_rose.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-32630b8c-58f8-454b-923d-dde0020a9eb6.png",
+      "prompt": "Create ONE standalone production game asset intended as moto_scooter_rose.png. Realistic pink and cream ladies' scooter with chrome mirrors, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Realistic pink and cream ladies' scooter with chrome mirrors, no brand"
+    },
+    {
+      "name": "moto_mobylette.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-d34e3de9-7db5-4add-a228-d1214c862bf1.png",
+      "prompt": "Create ONE standalone production game asset intended as moto_mobylette.png. Vintage 1970s moped (mobylette) with pedals, faded blue paint, rusty spokes, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Vintage 1970s moped (mobylette) with pedals, faded blue paint, rusty spokes, no brand"
+    },
+    {
+      "name": "moto_tricycle_cargo.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-8d9474bf-d2e6-4250-818e-eb10b2ef682e.png",
+      "prompt": "Create ONE standalone production game asset intended as moto_tricycle_cargo.png. Motor tricycle cargo with an open rear metal box full of sacks, as used in Ouagadougou markets, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Motor tricycle cargo with an open rear metal box full of sacks, as used in Ouagadougou markets, no brand"
+    },
+    {
+      "name": "moto_tricycle_taxi.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-73ea5829-f45a-4ae3-a683-8fa02e015ee6.png",
+      "prompt": "Create ONE standalone production game asset intended as moto_tricycle_taxi.png. Covered motor tricycle passenger taxi with a canvas roof, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Covered motor tricycle passenger taxi with a canvas roof, no brand"
+    },
+    {
+      "name": "moto_trail.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-dd9128a7-7b2b-4734-9d9b-76cf50b21199.png",
+      "prompt": "Create ONE standalone production game asset intended as moto_trail.png. Dusty 200cc trail / dual-sport motorcycle with knobby tyres, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Dusty 200cc trail / dual-sport motorcycle with knobby tyres, no brand"
+    },
+    {
+      "name": "moto_sport.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-2901ec17-9241-4228-8e1e-bb1c931a4ec7.png",
+      "prompt": "Create ONE standalone production game asset intended as moto_sport.png. Modern sport motorcycle with full fairing, yellow and black, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Modern sport motorcycle with full fairing, yellow and black, no brand"
+    },
+    {
+      "name": "moto_police.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-376002fa-188b-491a-bbd8-c86ebbe6ea50.png",
+      "prompt": "Create ONE standalone production game asset intended as moto_police.png. Police motorcycle, white with blue stripes, siren light, no real insignia\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Police motorcycle, white with blue stripes, siren light, no real insignia"
+    },
+    {
+      "name": "moto_livraison.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-7d3ad6bb-aaa9-46d0-b7d3-28a364196fbf.png",
+      "prompt": "Create ONE standalone production game asset intended as moto_livraison.png. 125cc motorcycle with a large red delivery box on the back, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "125cc motorcycle with a large red delivery box on the back, no brand"
+    },
+    {
+      "name": "moto_custom.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-7a872c57-18e1-4277-b3a6-6dee30b3c099.png",
+      "prompt": "Create ONE standalone production game asset intended as moto_custom.png. Customised commuter motorcycle with colourful seat cover, extra mirrors and stickers (no brands), as loved in Ouaga\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Customised commuter motorcycle with colourful seat cover, extra mirrors and stickers (no brands), as loved in Ouaga"
+    },
+    {
+      "name": "velo.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-dfd2348b-228e-4a39-baeb-af96f63d45d4.png",
+      "prompt": "Create ONE standalone production game asset intended as velo.png. Old black steel bicycle with a rear rack, as used by street vendors\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Old black steel bicycle with a rear rack, as used by street vendors"
+    },
+    {
+      "name": "voiture_taxi_vert.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-b3233305-b475-4339-8ed3-aebe88ab777c.png",
+      "prompt": "Create ONE standalone production game asset intended as voiture_taxi_vert.png. Green city taxi sedan of Ouagadougou, older 4-door sedan, roof taxi sign, no brand, no readable plate\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Green city taxi sedan of Ouagadougou, older 4-door sedan, roof taxi sign, no brand, no readable plate"
+    },
+    {
+      "name": "voiture_berline_ancienne.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-3b6ca042-a7f6-4db2-9928-4806b5dd7f88.png",
+      "prompt": "Create ONE standalone production game asset intended as voiture_berline_ancienne.png. Old 1980s-style 4-door sedan, beige paint with some rust, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Old 1980s-style 4-door sedan, beige paint with some rust, no brand"
+    },
+    {
+      "name": "voiture_berline_moderne.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-12cc1380-97a3-479c-b2b1-850f7ccd629f.png",
+      "prompt": "Create ONE standalone production game asset intended as voiture_berline_moderne.png. Modern silver compact 4-door sedan, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Modern silver compact 4-door sedan, no brand"
+    },
+    {
+      "name": "voiture_suv.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-2c647178-10bb-4a91-8949-63bfac82be35.png",
+      "prompt": "Create ONE standalone production game asset intended as voiture_suv.png. Large white off-road 4x4 SUV with roof rack, dusty, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Large white off-road 4x4 SUV with roof rack, dusty, no brand"
+    },
+    {
+      "name": "voiture_pickup.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-65096b0c-af4a-4626-9f7a-3a68283a9d48.png",
+      "prompt": "Create ONE standalone production game asset intended as voiture_pickup.png. Double-cab pickup truck, dark grey, loaded with bags in the back, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Double-cab pickup truck, dark grey, loaded with bags in the back, no brand"
+    },
+    {
+      "name": "voiture_luxe.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-30f0e448-f5ff-44e8-b269-0c6867dfd1fd.png",
+      "prompt": "Create ONE standalone production game asset intended as voiture_luxe.png. Black luxury executive sedan as seen in Ouaga 2000, tinted windows, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Black luxury executive sedan as seen in Ouaga 2000, tinted windows, no brand"
+    },
+    {
+      "name": "voiture_police.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-9c4113f6-7d0a-4b58-88fa-138f28b67b19.png",
+      "prompt": "Create ONE standalone production game asset intended as voiture_police.png. Police pickup, white and blue, light bar on the roof, no real insignia\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Police pickup, white and blue, light bar on the roof, no real insignia"
+    },
+    {
+      "name": "voiture_ambulance.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-65e1f722-e599-4505-be6b-4a5281f90127.png",
+      "prompt": "Create ONE standalone production game asset intended as voiture_ambulance.png. White ambulance van with red stripes and light bar, no real logos\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "White ambulance van with red stripes and light bar, no real logos"
+    },
+    {
+      "name": "minibus_brousse.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-5809980c-29db-4cb7-85e2-7f294a51fcdd.png",
+      "prompt": "Create ONE standalone production game asset intended as minibus_brousse.png. Old white minibus (bush taxi) with green stripe and a roof rack piled with luggage and sacks, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Old white minibus (bush taxi) with green stripe and a roof rack piled with luggage and sacks, no brand"
+    },
+    {
+      "name": "bus_urbain.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-28009540-563b-4fe0-b2c6-e03fe28aba04.png",
+      "prompt": "Create ONE standalone production game asset intended as bus_urbain.png. Modern green and yellow city bus, no brand, no real logos\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Modern green and yellow city bus, no brand, no real logos"
+    },
+    {
+      "name": "camion_benne.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-4afd9fe9-aa41-4f13-9893-4aa1320c5136.png",
+      "prompt": "Create ONE standalone production game asset intended as camion_benne.png. Old orange dump truck covered with red dust, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Old orange dump truck covered with red dust, no brand"
+    },
+    {
+      "name": "camion_citerne.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-e7688a3a-f7e0-4acb-9445-fabea325458a.png",
+      "prompt": "Create ONE standalone production game asset intended as camion_citerne.png. Water tanker truck, white tank, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Water tanker truck, white tank, no brand"
+    },
+    {
+      "name": "voiture_auto_ecole.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-91cd06a0-3c49-4b86-b3c5-68f27dbb6879.png",
+      "prompt": "Create ONE standalone production game asset intended as voiture_auto_ecole.png. Small red hatchback with a learner-driver roof sign, no brand\nPhotorealistic product studio photo for image-to-3D reconstruction. Square 1024x1024. Exactly ONE entire vehicle centered, front three-quarter view showing front and one side clearly; all wheels, mirrors, roof, cargo and extremities entirely inside frame with generous margin. Plain uniform light grey background and floor. Soft even neutral lighting without cast shadows. No driver or other people. No real brands, emblems, logos, readable license plates, watermarks or readable text (roof signs must be blank). No collage, extra view or background objects.",
+      "requestedPrompt": "Small red hatchback with a learner-driver roof sign, no brand"
+    },
+    {
+      "name": "bat_tour_ouaga2000.png",
+      "width": 1536,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-5e07627e-d28a-426c-a141-1d931e9fc171.png",
+      "prompt": "Create ONE standalone production game asset intended as bat_tour_ouaga2000.png. Modern 20-storey glass and white concrete office tower in Ouaga 2000, Burkina Faso, blue reflective glass, palm trees, front three-quarter view, clear sky, realistic\nLandscape 1536x1024 architectural reference for Blender. One complete building or requested architectural scene, front three-quarter view, entire building including roof and base visible within frame with clear margin, realistic Ouagadougou context. Neutral soft daylight, clear details, no strong cast shadows. No real logos or brand names, no watermark, no readable text. Plain-colour flags only if requested, no people in close-up.",
+      "requestedPrompt": "Modern 20-storey glass and white concrete office tower in Ouaga 2000, Burkina Faso, blue reflective glass, palm trees, front three-quarter view, clear sky, realistic"
+    },
+    {
+      "name": "bat_banque.png",
+      "width": 1536,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-e2761216-bff8-4739-b59d-0ceb3a5cd6ff.png",
+      "prompt": "Create ONE standalone production game asset intended as bat_banque.png. Headquarters of a large West African bank (fictional), 15 storeys, beige stone and bronze glass, grand entrance with columns, no logos, realistic\nLandscape 1536x1024 architectural reference for Blender. One complete building or requested architectural scene, front three-quarter view, entire building including roof and base visible within frame with clear margin, realistic Ouagadougou context. Neutral soft daylight, clear details, no strong cast shadows. No real logos or brand names, no watermark, no readable text. Plain-colour flags only if requested, no people in close-up.",
+      "requestedPrompt": "Headquarters of a large West African bank (fictional), 15 storeys, beige stone and bronze glass, grand entrance with columns, no logos, realistic"
+    },
+    {
+      "name": "bat_ministere.png",
+      "width": 1536,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-8855f207-c13a-4c1c-8172-bdcdbad56c4d.png",
+      "prompt": "Create ONE standalone production game asset intended as bat_ministere.png. Government ministry building in Ouagadougou, 6 storeys, sand-coloured concrete with sun-shading fins, flags on poles (plain colours), realistic\nLandscape 1536x1024 architectural reference for Blender. One complete building or requested architectural scene, front three-quarter view, entire building including roof and base visible within frame with clear margin, realistic Ouagadougou context. Neutral soft daylight, clear details, no strong cast shadows. No real logos or brand names, no watermark, no readable text. Plain-colour flags only if requested, no people in close-up.",
+      "requestedPrompt": "Government ministry building in Ouagadougou, 6 storeys, sand-coloured concrete with sun-shading fins, flags on poles (plain colours), realistic"
+    },
+    {
+      "name": "bat_hotel_luxe.png",
+      "width": 1536,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-0c1b9e2f-9e5a-4713-97a4-120da6f0fa15.png",
+      "prompt": "Create ONE standalone production game asset intended as bat_hotel_luxe.png. Five-star hotel in Ouaga 2000, curved white facade with balconies, fountain and palm-lined driveway, no logos\nLandscape 1536x1024 architectural reference for Blender. One complete building or requested architectural scene, front three-quarter view, entire building including roof and base visible within frame with clear margin, realistic Ouagadougou context. Neutral soft daylight, clear details, no strong cast shadows. No real logos or brand names, no watermark, no readable text. Plain-colour flags only if requested, no people in close-up.",
+      "requestedPrompt": "Five-star hotel in Ouaga 2000, curved white facade with balconies, fountain and palm-lined driveway, no logos"
+    },
+    {
+      "name": "bat_villa_ouaga2000.png",
+      "width": 1536,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-8163496f-e450-48c0-8b9e-61b672f8777e.png",
+      "prompt": "Create ONE standalone production game asset intended as bat_villa_ouaga2000.png. Luxury two-storey villa in Ouaga 2000 behind a high cream wall with an ornate gate, terraces and bougainvillea\nLandscape 1536x1024 architectural reference for Blender. One complete building or requested architectural scene, front three-quarter view, entire building including roof and base visible within frame with clear margin, realistic Ouagadougou context. Neutral soft daylight, clear details, no strong cast shadows. No real logos or brand names, no watermark, no readable text. Plain-colour flags only if requested, no people in close-up.",
+      "requestedPrompt": "Luxury two-storey villa in Ouaga 2000 behind a high cream wall with an ornate gate, terraces and bougainvillea"
+    },
+    {
+      "name": "bat_immeuble_r4.png",
+      "width": 1536,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-1cb8bfdb-46bb-4a8b-b260-2456123aa078.png",
+      "prompt": "Create ONE standalone production game asset intended as bat_immeuble_r4.png. Ordinary 4-storey apartment building in central Ouagadougou, ochre walls, balconies with laundry, air conditioners, shops below\nLandscape 1536x1024 architectural reference for Blender. One complete building or requested architectural scene, front three-quarter view, entire building including roof and base visible within frame with clear margin, realistic Ouagadougou context. Neutral soft daylight, clear details, no strong cast shadows. No real logos or brand names, no watermark, no readable text. Plain-colour flags only if requested, no people in close-up.",
+      "requestedPrompt": "Ordinary 4-storey apartment building in central Ouagadougou, ochre walls, balconies with laundry, air conditioners, shops below"
+    },
+    {
+      "name": "bat_station_service.png",
+      "width": 1536,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-8b80b698-99f3-42a5-b1c7-f0c88948f4c6.png",
+      "prompt": "Create ONE standalone production game asset intended as bat_station_service.png. Petrol station in Ouagadougou with canopy and pumps, fictional brand colours green and yellow, no real logos\nLandscape 1536x1024 architectural reference for Blender. One complete building or requested architectural scene, front three-quarter view, entire building including roof and base visible within frame with clear margin, realistic Ouagadougou context. Neutral soft daylight, clear details, no strong cast shadows. No real logos or brand names, no watermark, no readable text. Plain-colour flags only if requested, no people in close-up.",
+      "requestedPrompt": "Petrol station in Ouagadougou with canopy and pumps, fictional brand colours green and yellow, no real logos"
+    },
+    {
+      "name": "bat_pharmacie.png",
+      "width": 1536,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-0d0f8e3f-cd1e-4875-aeaf-e6a89cc095a5.png",
+      "prompt": "Create ONE standalone production game asset intended as bat_pharmacie.png. Neighbourhood pharmacy in Ouagadougou with green cross sign, glass door, steps and ramp\nLandscape 1536x1024 architectural reference for Blender. One complete building or requested architectural scene, front three-quarter view, entire building including roof and base visible within frame with clear margin, realistic Ouagadougou context. Neutral soft daylight, clear details, no strong cast shadows. No real logos or brand names, no watermark, no readable text. Plain-colour flags only if requested, no people in close-up.",
+      "requestedPrompt": "Neighbourhood pharmacy in Ouagadougou with green cross sign, glass door, steps and ramp"
+    },
+    {
+      "name": "bat_ecole.png",
+      "width": 1536,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-586caae1-eda7-4bdf-a530-341d5b92fe2c.png",
+      "prompt": "Create ONE standalone production game asset intended as bat_ecole.png. Primary school in Burkina Faso, long single-storey classrooms with ochre walls and blue shutters, schoolyard with a flagpole\nLandscape 1536x1024 architectural reference for Blender. One complete building or requested architectural scene, front three-quarter view, entire building including roof and base visible within frame with clear margin, realistic Ouagadougou context. Neutral soft daylight, clear details, no strong cast shadows. No real logos or brand names, no watermark, no readable text. Plain-colour flags only if requested, no people in close-up.",
+      "requestedPrompt": "Primary school in Burkina Faso, long single-storey classrooms with ochre walls and blue shutters, schoolyard with a flagpole"
+    },
+    {
+      "name": "bat_mosquee.png",
+      "width": 1536,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-b27a2948-56a2-4d87-b7e5-32b7a0fe6480.png",
+      "prompt": "Create ONE standalone production game asset intended as bat_mosquee.png. Neighbourhood mosque in Ouagadougou, white and green, one minaret, small dome\nLandscape 1536x1024 architectural reference for Blender. One complete building or requested architectural scene, front three-quarter view, entire building including roof and base visible within frame with clear margin, realistic Ouagadougou context. Neutral soft daylight, clear details, no strong cast shadows. No real logos or brand names, no watermark, no readable text. Plain-colour flags only if requested, no people in close-up.",
+      "requestedPrompt": "Neighbourhood mosque in Ouagadougou, white and green, one minaret, small dome"
+    },
+    {
+      "name": "bat_eglise.png",
+      "width": 1536,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-68b65d88-d205-4cda-a6b5-12c5fd5db517.png",
+      "prompt": "Create ONE standalone production game asset intended as bat_eglise.png. Neighbourhood church in Ouagadougou, red brick, bell tower with a cross\nLandscape 1536x1024 architectural reference for Blender. One complete building or requested architectural scene, front three-quarter view, entire building including roof and base visible within frame with clear margin, realistic Ouagadougou context. Neutral soft daylight, clear details, no strong cast shadows. No real logos or brand names, no watermark, no readable text. Plain-colour flags only if requested, no people in close-up.",
+      "requestedPrompt": "Neighbourhood church in Ouagadougou, red brick, bell tower with a cross"
+    },
+    {
+      "name": "bat_marche_couvert.png",
+      "width": 1536,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-2fa3544a-341b-42f2-b060-8ac476f24b47.png",
+      "prompt": "Create ONE standalone production game asset intended as bat_marche_couvert.png. Large modern covered market hall with rows of stalls, inspired by the central market of Ouagadougou, red and ochre arches\nLandscape 1536x1024 architectural reference for Blender. One complete building or requested architectural scene, front three-quarter view, entire building including roof and base visible within frame with clear margin, realistic Ouagadougou context. Neutral soft daylight, clear details, no strong cast shadows. No real logos or brand names, no watermark, no readable text. Plain-colour flags only if requested, no people in close-up.",
+      "requestedPrompt": "Large modern covered market hall with rows of stalls, inspired by the central market of Ouagadougou, red and ochre arches"
+    },
+    {
+      "name": "bat_maquis.png",
+      "width": 1536,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-a8cbbdb2-1a61-4f8c-be8c-52000b1b3381.png",
+      "prompt": "Create ONE standalone production game asset intended as bat_maquis.png. Popular maquis bar-restaurant: low ochre building, straw paillotes, plastic chairs, string lights, hand-painted sign\nLandscape 1536x1024 architectural reference for Blender. One complete building or requested architectural scene, front three-quarter view, entire building including roof and base visible within frame with clear margin, realistic Ouagadougou context. Neutral soft daylight, clear details, no strong cast shadows. No real logos or brand names, no watermark, no readable text. Plain-colour flags only if requested, no people in close-up.",
+      "requestedPrompt": "Popular maquis bar-restaurant: low ochre building, straw paillotes, plastic chairs, string lights, hand-painted sign"
+    },
+    {
+      "name": "bat_garage_moto.png",
+      "width": 1536,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-e2cea529-4821-45bf-987c-2adfc63541a8.png",
+      "prompt": "Create ONE standalone production game asset intended as bat_garage_moto.png. Street motorbike repair shop under a tin roof, motorbikes waiting, tools and tyres everywhere\nLandscape 1536x1024 architectural reference for Blender. One complete building or requested architectural scene, front three-quarter view, entire building including roof and base visible within frame with clear margin, realistic Ouagadougou context. Neutral soft daylight, clear details, no strong cast shadows. No real logos or brand names, no watermark, no readable text. Plain-colour flags only if requested, no people in close-up.",
+      "requestedPrompt": "Street motorbike repair shop under a tin roof, motorbikes waiting, tools and tyres everywhere"
+    },
+    {
+      "name": "facade_verre_bleu.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-df331edf-52d5-406d-bfcb-cbbe56e95145.png",
+      "prompt": "Edit this blue reflective glass curtain-wall material texture to make its repeating grid seamless. Preserve photorealistic blue glass with subtle soft sky reflections and thin aluminium mullions, orthographic straight-on view, flat neutral light. Square 1024x1024. Correct the framing: canvas edges must pass THROUGH THE MIDDLE of glass panes, never along mullions. Exactly four equally spaced vertical mullions at x=128,384,640,896 and four equally spaced horizontal mullions at y=128,384,640,896. This leaves half-pane strips of equal width at every edge that join into full panes on repetition. Uniform thin mullion thickness throughout, no metal border on any of the four image edges, no extra strips near edges. Reflections and blue shade at left/right and top/bottom must match for tileable repeating material. Fill entire canvas. No perspective, text, people, logos or watermark.",
+      "requestedPrompt": "Seamless tileable texture of a blue reflective glass curtain wall with thin aluminium mullions, straight-on, 1024×1024"
+    },
+    {
+      "name": "facade_beton_moderne.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-179c97ed-0be5-4baf-a56b-1000f24c13cc.png",
+      "prompt": "Create ONE standalone production game asset intended as facade_beton_moderne.png. Seamless tileable texture of modern beige concrete cladding panels with fine joints, straight-on, 1024×1024\nSquare 1024x1024. Material texture fills entire canvas, perfectly orthographic front view. Seamless tileable in BOTH axes, opposite edges must match including mullions and joints, complete integer repeating units. Neutral flat illumination, no directional gradient or strong shadows. No text, logos, borders, perspective, doors or people.",
+      "requestedPrompt": "Seamless tileable texture of modern beige concrete cladding panels with fine joints, straight-on, 1024×1024"
+    },
+    {
+      "name": "facade_pierre.png",
+      "width": 1024,
+      "height": 1024,
+      "source": "C:\\Users\\Prince\\.codex\\generated_images\\01a21700-2722-78b1-bc2b-c167397f43a0\\exec-b6eb67dd-8c9c-428c-966f-4d8e4f6f5c21.png",
+      "prompt": "Create ONE standalone production game asset intended as facade_pierre.png. Seamless tileable texture of light sandstone facade blocks, straight-on, 1024×1024\nSquare 1024x1024. Material texture fills entire canvas, perfectly orthographic front view. Seamless tileable in BOTH axes, opposite edges must match including mullions and joints, complete integer repeating units. Neutral flat illumination, no directional gradient or strong shadows. No text, logos, borders, perspective, doors or people.",
+      "requestedPrompt": "Seamless tileable texture of light sandstone facade blocks, straight-on, 1024×1024"
+    }
+  ]
+}

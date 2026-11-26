@@ -1,7 +1,7 @@
 //! Every passer-by and driver is a real person of Ouaga: a stable identity (name, age, job,
 //! neighbourhood, a bit of life story and what they say) drawn from their identity number.
 
-use crate::skinned::{C_FEMME_VILLE, C_FEMME_WAX, C_HOMME_BOUBOU, C_JEUNE};
+use crate::skinned::{C_FEMME_VILLE, C_FEMME_WAX, C_HOMME_BOUBOU, C_JEUNE, C_MPFB0, MPFB};
 
 const NOMS: [&str; 24] = [
     "Ouédraogo", "Sawadogo", "Kaboré", "Compaoré", "Traoré", "Zongo", "Ouattara", "Kouanda", "Sanou", "Ilboudo", "Kiemtoré", "Nikiéma",
@@ -60,17 +60,36 @@ fn h(id: u32, k: u32) -> usize {
 
 /// The 3D model of a person: two of the four rigged citizens are women.
 pub fn model_of(id: u32) -> usize {
-    [C_FEMME_WAX, C_HOMME_BOUBOU, C_JEUNE, C_FEMME_VILLE][h(id, 1) % 4]
+    // 4 people generated from pictures + 10 built in Blender with MPFB
+    let all = 4 + MPFB.len();
+    let k = h(id, 1) % all;
+    if k < 4 { [C_FEMME_WAX, C_HOMME_BOUBOU, C_JEUNE, C_FEMME_VILLE][k] } else { C_MPFB0 + (k - 4) }
+}
+
+fn traits(model: usize) -> (bool, u8) {
+    match model {
+        m if m == C_FEMME_WAX || m == C_FEMME_VILLE => (true, 1),
+        m if m == C_HOMME_BOUBOU => (false, 2),
+        m if m >= C_MPFB0 => {
+            let (_, f, a) = MPFB[(m - C_MPFB0).min(MPFB.len() - 1)];
+            (f, a)
+        }
+        _ => (false, 0),
+    }
 }
 
 pub fn person(id: u32) -> Person {
     let model = model_of(id);
-    let female = model == C_FEMME_WAX || model == C_FEMME_VILLE;
+    let (female, age_group) = traits(model);
     let candidates: Vec<&Job> = JOBS.iter().filter(|j| if female { j.female } else { j.male }).collect();
     let job = candidates[h(id, 2) % candidates.len()];
     let first = if female { PRENOMS_F[h(id, 3) % PRENOMS_F.len()] } else { PRENOMS_H[h(id, 3) % PRENOMS_H.len()] };
     let last = NOMS[h(id, 4) % NOMS.len()];
-    let age = if model == C_HOMME_BOUBOU { 45 + (h(id, 5) % 30) as u32 } else { 18 + (h(id, 5) % 30) as u32 };
+    let age = match age_group {
+        0 => 17 + (h(id, 5) % 14) as u32,
+        1 => 30 + (h(id, 5) % 22) as u32,
+        _ => 62 + (h(id, 5) % 20) as u32,
+    };
     let quartier = QUARTIERS[h(id, 6) % QUARTIERS.len()];
     Person {
         name: format!("{first} {last}"),

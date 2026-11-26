@@ -11,6 +11,20 @@ pub const C_HOMME_BOUBOU: usize = 2;
 pub const C_JEUNE: usize = 3;
 pub const C_FEMME_VILLE: usize = 4;
 pub const PEOPLE: [usize; 4] = [C_FEMME_WAX, C_HOMME_BOUBOU, C_JEUNE, C_FEMME_VILLE];
+/// Residents built in Blender with MPFB (MakeHuman): name, woman?, age group (0 young, 1 adult, 2 elder)
+pub const MPFB: [(&str, bool, u8); 10] = [
+    ("h_jeune", false, 0),
+    ("h_ouvrier", false, 1),
+    ("h_cadre", false, 1),
+    ("h_ancien", false, 2),
+    ("h_sportif", false, 0),
+    ("f_etudiante", true, 0),
+    ("f_cadre", true, 1),
+    ("f_sportive", true, 0),
+    ("f_maman", true, 1),
+    ("f_grandmere", true, 2),
+];
+pub const C_MPFB0: usize = 5;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Anim {
@@ -141,12 +155,22 @@ fn parse(bytes: &[u8], color: &'static [u8], normal: &'static [u8]) -> Option<Ch
 pub fn chars() -> &'static Vec<CharData> {
     static DATA: OnceLock<Vec<CharData>> = OnceLock::new();
     DATA.get_or_init(|| {
-        let src: [(&[u8], &'static [u8], &'static [u8]); 5] = [
+        let src: [(&[u8], &'static [u8], &'static [u8]); 15] = [
             (include_bytes!("../assets/chars/bila.ocm"), include_bytes!("../assets/chars/bila_c.jpg"), include_bytes!("../assets/chars/bila_n.jpg")),
             (include_bytes!("../assets/chars/femme_wax.ocm"), include_bytes!("../assets/chars/femme_wax_c.jpg"), include_bytes!("../assets/chars/femme_wax_n.jpg")),
             (include_bytes!("../assets/chars/homme_boubou.ocm"), include_bytes!("../assets/chars/homme_boubou_c.jpg"), include_bytes!("../assets/chars/homme_boubou_n.jpg")),
             (include_bytes!("../assets/chars/jeune_homme.ocm"), include_bytes!("../assets/chars/jeune_homme_c.jpg"), include_bytes!("../assets/chars/jeune_homme_n.jpg")),
             (include_bytes!("../assets/chars/femme_ville.ocm"), include_bytes!("../assets/chars/femme_ville_c.jpg"), include_bytes!("../assets/chars/femme_ville_n.jpg")),
+            (include_bytes!("../assets/chars/h_jeune.ocm"), include_bytes!("../assets/chars/h_jeune_c.jpg"), include_bytes!("../assets/chars/h_jeune_n.jpg")),
+            (include_bytes!("../assets/chars/h_ouvrier.ocm"), include_bytes!("../assets/chars/h_ouvrier_c.jpg"), include_bytes!("../assets/chars/h_ouvrier_n.jpg")),
+            (include_bytes!("../assets/chars/h_cadre.ocm"), include_bytes!("../assets/chars/h_cadre_c.jpg"), include_bytes!("../assets/chars/h_cadre_n.jpg")),
+            (include_bytes!("../assets/chars/h_ancien.ocm"), include_bytes!("../assets/chars/h_ancien_c.jpg"), include_bytes!("../assets/chars/h_ancien_n.jpg")),
+            (include_bytes!("../assets/chars/h_sportif.ocm"), include_bytes!("../assets/chars/h_sportif_c.jpg"), include_bytes!("../assets/chars/h_sportif_n.jpg")),
+            (include_bytes!("../assets/chars/f_etudiante.ocm"), include_bytes!("../assets/chars/f_etudiante_c.jpg"), include_bytes!("../assets/chars/f_etudiante_n.jpg")),
+            (include_bytes!("../assets/chars/f_cadre.ocm"), include_bytes!("../assets/chars/f_cadre_c.jpg"), include_bytes!("../assets/chars/f_cadre_n.jpg")),
+            (include_bytes!("../assets/chars/f_sportive.ocm"), include_bytes!("../assets/chars/f_sportive_c.jpg"), include_bytes!("../assets/chars/f_sportive_n.jpg")),
+            (include_bytes!("../assets/chars/f_maman.ocm"), include_bytes!("../assets/chars/f_maman_c.jpg"), include_bytes!("../assets/chars/f_maman_n.jpg")),
+            (include_bytes!("../assets/chars/f_grandmere.ocm"), include_bytes!("../assets/chars/f_grandmere_c.jpg"), include_bytes!("../assets/chars/f_grandmere_n.jpg")),
         ];
         src.iter().filter_map(|(m, c, n)| parse(m, c, n)).collect()
     })
@@ -188,7 +212,7 @@ layout(location=2) in vec2 a_uv;
 layout(location=3) in vec4 a_joints;
 layout(location=4) in vec4 a_weights;
 uniform mat4 u_vp; uniform mat4 u_model; uniform mat4 u_lvp;
-uniform mat4 u_bones[24];
+uniform mat4 u_bones[40];
 out vec3 v_pos; out vec3 v_nrm; out vec2 v_uv; out vec4 v_sc;
 void main() {
     mat4 s = u_bones[int(a_joints.x)] * a_weights.x + u_bones[int(a_joints.y)] * a_weights.y
@@ -304,7 +328,7 @@ impl Skinned {
                 gl.bind_texture(glow::TEXTURE_2D, Some(shadow_tex));
             }
             let (lm, lb) = (l("u_model"), l("u_bones"));
-            let mut buf: Vec<f32> = Vec::with_capacity(24 * 16);
+            let mut buf: Vec<f32> = Vec::with_capacity(40 * 16);
             for i in insts {
                 let (Some(g), Some(c)) = (self.list.get(i.model), data.get(i.model)) else { continue };
                 gl.active_texture(glow::TEXTURE4);
@@ -313,10 +337,10 @@ impl Skinned {
                 gl.bind_texture(glow::TEXTURE_2D, Some(g.normal));
                 gl.uniform_matrix_4_f32_slice(lm.as_ref(), false, &i.mat.to_cols_array());
                 buf.clear();
-                for m in c.sample(i.anim, i.t).iter().take(24) {
+                for m in c.sample(i.anim, i.t).iter().take(40) {
                     buf.extend_from_slice(&m.to_cols_array());
                 }
-                while buf.len() < 24 * 16 {
+                while buf.len() < 40 * 16 {
                     buf.extend_from_slice(&Mat4::IDENTITY.to_cols_array());
                 }
                 gl.uniform_matrix_4_f32_slice(lb.as_ref(), false, &buf);

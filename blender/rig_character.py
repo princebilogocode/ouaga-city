@@ -10,6 +10,8 @@ from mathutils import Vector, Matrix
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 SRC, OUT, H = argv[0], argv[1], float(argv[2])
+JOINTS = argv[3] if len(argv) > 3 else None
+import json
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=SRC)
@@ -36,6 +38,13 @@ bm.free()
 
 # --- normalise: feet at z = 0, height H, centred, facing +X
 co = [v.co.copy() for v in me.vertices]
+ROT = Matrix.Identity(3)
+if JOINTS:
+    # MakeHuman characters face -Y: turn them to face +X like the others
+    ROT = Matrix.Rotation(math.radians(90), 3, "Z")
+    for v in me.vertices:
+        v.co = ROT @ v.co
+    co = [v.co.copy() for v in me.vertices]
 zmin = min(c.z for c in co); zmax = max(c.z for c in co)
 xmin = min(c.x for c in co); xmax = max(c.x for c in co)
 ymin = min(c.y for c in co); ymax = max(c.y for c in co)
@@ -43,11 +52,19 @@ s = H / (zmax - zmin)
 cx, cy = (xmin + xmax) / 2, (ymin + ymax) / 2
 for v in me.vertices:
     v.co = Vector(((v.co.x - cx) * s, (v.co.y - cy) * s, (v.co.z - zmin) * s))
+FLIP = False
 feet = [v.co for v in me.vertices if v.co.z < 0.05 * H]
-if sum(c.x for c in feet) / max(1, len(feet)) < 0:
+if not JOINTS and sum(c.x for c in feet) / max(1, len(feet)) < 0:
+    FLIP = True
     for v in me.vertices:
         v.co = Vector((-v.co.x, -v.co.y, v.co.z))
 me.update()
+
+
+def norm_point(p):
+    p = ROT @ Vector(p)
+    q = Vector(((p.x - cx) * s, (p.y - cy) * s, (p.z - zmin) * s))
+    return Vector((-q.x, -q.y, q.z)) if FLIP else q
 
 # --- skeleton proportions measured on the mesh
 def side_pts(sg, cond):
@@ -78,6 +95,32 @@ for sg, n in ((1, "L"), (-1, "R")):
     J["ankle" + n] = Vector((-0.01 * H, fy, 0.045 * H))
     J["toe" + n] = Vector((fx, fy, 0.012 * H))
 
+FINGERS = ["thumb", "index", "middle", "ring", "pinky"]
+if JOINTS:
+    mj = json.load(open(JOINTS))
+    hd = lambda n: norm_point(mj[n]["head"])
+    tl = lambda n: norm_point(mj[n]["tail"])
+    J["hips"] = hd("pelvis") + Vector((0, 0, 0.02 * H))
+    J["spine"] = hd("spine_02")
+    J["chest"] = hd("spine_03")
+    J["neck"] = hd("neck_01")
+    J["head"] = hd("head")
+    J["head_end"] = Vector((J["head"].x, J["head"].y, H))
+    for n, m in (("L", "l"), ("R", "r")):
+        J["shoulder" + n] = hd(f"upperarm_{m}")
+        J["elbow" + n] = hd(f"lowerarm_{m}")
+        J["wrist" + n] = hd(f"hand_{m}")
+        J["knuckle" + n] = hd(f"middle_01_{m}")
+        J["tip" + n] = tl(f"middle_03_{m}")
+        J["hipj" + n] = hd(f"thigh_{m}")
+        J["knee" + n] = hd(f"calf_{m}")
+        J["ankle" + n] = hd(f"foot_{m}")
+        J["toe" + n] = tl(f"ball_{m}")
+        for fg in FINGERS:
+            J[f"{fg}1{n}"] = hd(f"{fg}_01_{m}")
+            J[f"{fg}2{n}"] = hd(f"{fg}_02_{m}")
+            J[f"{fg}3{n}"] = tl(f"{fg}_03_{m}")
+
 BONES = [
     ("hips", "hips", "spine", None),
     ("spine", "spine", "chest", "hips"),
@@ -90,7 +133,16 @@ for n in ("L", "R"):
         ("upperarm" + n, "shoulder" + n, "elbow" + n, "chest"),
         ("forearm" + n, "elbow" + n, "wrist" + n, "upperarm" + n),
         ("hand" + n, "wrist" + n, "knuckle" + n, "forearm" + n),
-        ("fingers" + n, "knuckle" + n, "tip" + n, "hand" + n),
+    ]
+    if JOINTS:
+        for fg in FINGERS:
+            BONES += [
+                (f"{fg}1{n}", f"{fg}1{n}", f"{fg}2{n}", "hand" + n),
+                (f"{fg}2{n}", f"{fg}2{n}", f"{fg}3{n}", f"{fg}1{n}"),
+            ]
+    else:
+        BONES += [("fingers" + n, "knuckle" + n, "tip" + n, "hand" + n)]
+    BONES += [
         ("thigh" + n, "hipj" + n, "knee" + n, "hips"),
         ("shin" + n, "knee" + n, "ankle" + n, "thigh" + n),
         ("foot" + n, "ankle" + n, "toe" + n, "shin" + n),
@@ -133,7 +185,7 @@ def geometric_weights(p):
     sg = 1 if p.y >= 0 else -1
     n = "L" if sg > 0 else "R"
     if sg * p.y > 0.115 * H and p.z > 0.36 * H:
-        cand = ["upperarm" + n, "forearm" + n, "hand" + n, "fingers" + n, "chest"]
+        cand = [b[0] for b in BONES if b[0].endswith(n) and b[0][:-1] in ("upperarm", "forearm", "hand", "fingers", *[f + k for f in FINGERS for k in "12"])] + ["chest"]
     elif p.z < 0.5 * H:
         cand = ["thighL", "shinL", "footL", "thighR", "shinR", "footR", "hips"]
     else:
@@ -169,15 +221,42 @@ def arm_down(n):
     a = math.degrees(math.atan2(sg * d.y, -d.z))
     return -sg * (a - 6.0)
 
-CURL = {"L": 22.0, "R": 22.0}
+def curl_axis(n, fg):
+    d = (J[f"{fg}3{n}"] - J[f"{fg}1{n}"]).normalized()
+    across = (J[f"pinky1{n}"] - J[f"index1{n}"]).normalized()
+    palm = across.cross(d).normalized()
+    if palm.z > 0:
+        palm = -palm
+    return d.cross(palm).normalized()
+
+
+# rest-pose corrections: MakeHuman forearms and hands are bent forward at rest; straighten them so
+# the animations start from straight arms, like the other characters
+CORR = {}
+if JOINTS:
+    for n in ("L", "R"):
+        du = (J["elbow" + n] - J["shoulder" + n]).normalized()
+        df = (J["wrist" + n] - J["elbow" + n]).normalized()
+        cf = df.rotation_difference(du)
+        CORR["forearm" + n] = cf.to_matrix().to_4x4()
+        dh = cf @ (J["knuckle" + n] - J["wrist" + n]).normalized()
+        CORR["hand" + n] = dh.rotation_difference(du).to_matrix().to_4x4()
 
 
 def pose(rot, root=Vector((0, 0, 0))):
+    for b, c in CORR.items():
+        rot[b] = rot.get(b, Matrix.Identity(4)) @ c
     for n, sg in (("L", 1), ("R", -1)):
-        if "fingers" + n not in rot:
-            rot["fingers" + n] = R("X", -sg * CURL[n])
-        if "hand" + n not in rot:
-            rot["hand" + n] = R("X", -sg * CURL[n] * 0.35)
+        c = rot.pop("_curl" + n, 22.0)
+        if JOINTS:
+            for fg in FINGERS:
+                k = 0.55 if fg == "thumb" else 1.0
+                ax = curl_axis(n, fg)
+                rot.setdefault(f"{fg}1{n}", Matrix.Rotation(math.radians(c * 0.8 * k), 4, ax))
+                rot.setdefault(f"{fg}2{n}", Matrix.Rotation(math.radians(c * 1.1 * k), 4, ax))
+        elif "fingers" + n not in rot:
+            rot["fingers" + n] = R("X", -sg * c)
+        rot["hand" + n] = R("X", -sg * c * 0.2) @ rot.get("hand" + n, Matrix.Identity(4))
     D = {}
     for name, h, t, parent in BONES:
         hp = J[h]
@@ -227,7 +306,7 @@ def anim_run(t):
     return pose(rot, Vector((0, 0, -0.03 * H + 0.03 * H * abs(math.sin(ph)))))
 
 def anim_aim(t):
-    rot = {"fingersR": R("X", 75), "fingersL": R("X", -60)}
+    rot = {"_curlR": 75.0, "_curlL": 60.0}
     b = math.sin(t * 2 * math.pi)
     base_arms(rot, 55, 0, 70, 0)
     # right arm straight forward, left hand supporting
@@ -240,7 +319,7 @@ def anim_aim(t):
     return pose(rot)
 
 def anim_ride(t):
-    rot = {"fingersR": R("X", 80), "fingersL": R("X", -80)}
+    rot = {"_curlR": 80.0, "_curlL": 80.0}
     base_arms(rot, 62, 62, 28, 28)
     legs(rot, 78, 78, 95, 95, -15, -15)
     rot["spine"] = R("Y", 18)
@@ -248,7 +327,7 @@ def anim_ride(t):
     return pose(rot)
 
 def anim_drive(t):
-    rot = {"fingersR": R("X", 75), "fingersL": R("X", -75)}
+    rot = {"_curlR": 75.0, "_curlL": 75.0}
     base_arms(rot, 55, 55, 45, 45)
     legs(rot, 88, 88, 80, 80)
     rot["spine"] = R("Y", -6)
@@ -263,7 +342,7 @@ def anim_sit(t):
     return pose(rot)
 
 def anim_eat(t):
-    rot = {"fingersR": R("X", 55)}
+    rot = {"_curlR": 55.0}
     k = max(0.0, math.sin(t * 2 * math.pi)) ** 0.7
     base_arms(rot, 22, 25 + 45 * k, 55, 60 + 85 * k)
     rot["upperarmR"] = R("Z", 25 * k) @ rot["upperarmR"]
@@ -280,7 +359,7 @@ def anim_squat(t):
     return pose(rot, Vector((0.0, 0, -0.27 * H * k)))
 
 def anim_punch(t):
-    rot = {"fingersR": R("X", 100), "fingersL": R("X", -100)}
+    rot = {"_curlR": 100.0, "_curlL": 100.0}
     k = math.sin(min(1.0, t * 2.0) * math.pi)
     base_arms(rot, 50, 20 + 70 * k, 110, 100 - 95 * k)
     rot["chest"] = R("Z", 25 * k)
@@ -288,7 +367,7 @@ def anim_punch(t):
     return pose(rot)
 
 def anim_talk(t):
-    rot = {"fingersR": R("X", 10 + 25 * (0.5 + 0.5 * math.sin(t * 6 * math.pi))), "fingersL": R("X", -15)}
+    rot = {"_curlR": 10 + 25 * (0.5 + 0.5 * math.sin(t * 6 * math.pi)), "_curlL": 15}
     a = math.sin(t * 2 * math.pi)
     c = math.sin(t * 4 * math.pi + 1)
     base_arms(rot, 18 + 14 * a, 24 + 18 * c, 45 + 25 * a, 60 + 30 * c)

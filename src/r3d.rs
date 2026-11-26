@@ -24,7 +24,7 @@ use std::sync::{Arc, Mutex};
 pub const FLOATS: usize = 13;
 const CHUNK: f32 = 400.0;
 const TEX: usize = 512;
-const LAYERS: usize = 38;
+const LAYERS: usize = 40;
 const SHADOW_SIZE: i32 = 2048;
 const SHADOW_HALF: f32 = 150.0;
 
@@ -53,6 +53,8 @@ pub const L_BANCO: f32 = 23.0;
 pub const L_CARREAUX: f32 = 24.0;
 pub const L_CLOTURE: f32 = 25.0;
 pub const L_SIGN0: f32 = 30.0;
+pub const L_BETON_MODERNE: f32 = 38.0;
+pub const L_PIERRE: f32 = 39.0;
 /// plaster without painted windows (the windows are 3D kit pieces near the camera)
 pub const L_PLASTER: f32 = 20.0;
 
@@ -320,7 +322,7 @@ fn build_textures() -> (Vec<u8>, Vec<u8>) {
         (1, photo!("asphalte")),
         (5, photo!("beton")),
         (7, photo!("herbe")),
-        (11, photo!("vitre")),
+        (11, Photo { color: include_bytes!("../assets/tex/u_facade_verre_bleu.jpg"), normal: &[] }),
         (12, photo!("ecorce")),
         (16, photo!("parquet")),
         (17, photo!("carrelage")),
@@ -349,6 +351,8 @@ fn build_textures() -> (Vec<u8>, Vec<u8>) {
         (34, Photo { color: include_bytes!("../assets/tex/u_enseigne_quincaillerie.jpg"), normal: &[] }),
         (35, Photo { color: include_bytes!("../assets/tex/u_enseigne_couture.jpg"), normal: &[] }),
         (36, Photo { color: include_bytes!("../assets/tex/u_enseigne_pharmacie.jpg"), normal: &[] }),
+        (38, Photo { color: include_bytes!("../assets/tex/u_facade_beton_moderne.jpg"), normal: &[] }),
+        (39, Photo { color: include_bytes!("../assets/tex/u_facade_pierre.jpg"), normal: include_bytes!("../assets/tex/mur_n.jpg") }),
         (37, Photo { color: include_bytes!("../assets/tex/u_enseigne_restaurant.jpg"), normal: &[] }),
     ];
     let mut color = vec![0u8; TEX * TEX * 4 * LAYERS];
@@ -440,6 +444,8 @@ fn building_mesh(mb: &mut MeshBuilder, b: &crate::map::Building) {
         _ => [L_WALL, L_WALL, L_OCRE, L_ROSE, L_CARREAUX, L_BANCO, L_OCRE][(b.seed / 3) as usize % 7],
     };
     let facade = if facade == L_BANCO && b.levels > 1 { L_OCRE } else { facade };
+    // offices, banks, ministries, hotels: modern concrete or stone (windows painted over them)
+    let facade = if matches!(b.kind, 'o' | 'g' | 'h') || b.levels >= 4 { [L_BETON_MODERNE, L_PIERRE, facade][(b.seed / 11) as usize % 3] } else { facade };
     let tint = if glass {
         rgb(200, 214, 226)
     } else if facade == L_WALL {
