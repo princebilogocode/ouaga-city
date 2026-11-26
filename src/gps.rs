@@ -132,21 +132,43 @@ impl PartialOrd for St {
     }
 }
 
-/// The road route from `from` to `to` (A*), as a polyline starting at `from`.
+/// The point of the nearest street under `p`, and the graph nodes at both ends of that stretch
+/// of street with the distance to each.
+fn on_street(map: &Map, g: &Graph, p: Pos2) -> Option<(Pos2, Vec<(u32, f32)>)> {
+    let (ri, si, t, _) = map.nearest_road(p, 250.0, 4)?;
+    let r = &map.roads[ri];
+    let (a, b) = (r.pts[si], r.pts[si + 1]);
+    let proj = a + (b - a) * t;
+    let mut ends = Vec::new();
+    for q in [a, b] {
+        if let Some(n) = nearest(g, q) {
+            ends.push((n, (g.nodes[n as usize] - proj).length()));
+        }
+    }
+    if ends.is_empty() {
+        None
+    } else {
+        Some((proj, ends))
+    }
+}
+
+/// The road route from `from` to `to` (A*), as a polyline starting at `from`, following the streets.
 pub fn route(map: &Map, from: Pos2, to: Pos2) -> Vec<Pos2> {
     let g = graph(map);
-    let (Some(s), Some(t)) = (nearest(g, from), nearest(g, to)) else { return vec![from, to] };
-    let goal = g.nodes[t as usize];
+    let (Some((p0, starts)), Some((p1, goals))) = (on_street(map, g, from), on_street(map, g, to)) else { return vec![from, to] };
     let mut dist: HashMap<u32, f32> = HashMap::new();
     let mut prev: HashMap<u32, u32> = HashMap::new();
     let mut heap = BinaryHeap::new();
-    dist.insert(s, 0.0);
-    heap.push(St((g.nodes[s as usize] - goal).length(), s));
-    let mut found = false;
+    for &(n, c) in &starts {
+        if dist.get(&n).map_or(true, |&d| c < d) {
+            dist.insert(n, c);
+            heap.push(St(c + (g.nodes[n as usize] - p1).length(), n));
+        }
+    }
+    let mut best: Option<(f32, u32)> = None;
     let mut steps = 0;
-    while let Some(St(_, u)) = heap.pop() {
-        if u == t {
-            found = true;
+    while let Some(St(f, u)) = heap.pop() {
+        if best.is_some_and(|b| f >= b.0) {
             break;
         }
         steps += 1;
@@ -154,25 +176,30 @@ pub fn route(map: &Map, from: Pos2, to: Pos2) -> Vec<Pos2> {
             break;
         }
         let du = dist[&u];
+        if let Some(&(_, c)) = goals.iter().find(|(n, _)| *n == u) {
+            if best.map_or(true, |b| du + c < b.0) {
+                best = Some((du + c, u));
+            }
+        }
         for &(v, w) in &g.adj[u as usize] {
             let nd = du + w;
             if dist.get(&v).map_or(true, |&d| nd < d) {
                 dist.insert(v, nd);
                 prev.insert(v, u);
-                heap.push(St(nd + (g.nodes[v as usize] - goal).length(), v));
+                heap.push(St(nd + (g.nodes[v as usize] - p1).length(), v));
             }
         }
     }
-    if !found {
-        return vec![from, to];
-    }
-    let mut path = vec![to, goal];
+    let Some((_, t)) = best else { return vec![from, p0, p1, to] };
+    let mut path = vec![to, p1, g.nodes[t as usize]];
     let mut c = t;
     while let Some(&p) = prev.get(&c) {
         path.push(g.nodes[p as usize]);
         c = p;
     }
+    path.push(p0);
     path.push(from);
     path.reverse();
+    path.dedup_by(|a, b| (*a - *b).length() < 0.5);
     path
 }

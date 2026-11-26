@@ -277,9 +277,27 @@ pub fn build_steps(map: &Map) -> Vec<Step> {
     ]
 }
 
+/// Where the game keeps its saves. Portable: a "sauvegardes" folder next to the program (so the
+/// game runs from a USB key without installing anything); if that folder can't be written, the
+/// user's application data folder.
+pub fn data_dir() -> std::path::PathBuf {
+    use std::sync::OnceLock;
+    static D: OnceLock<std::path::PathBuf> = OnceLock::new();
+    D.get_or_init(|| {
+        if let Some(dir) = std::env::current_exe().ok().and_then(|e| e.parent().map(|p| p.join("sauvegardes"))) {
+            if std::fs::create_dir_all(&dir).is_ok() && std::fs::write(dir.join(".test"), b"ok").is_ok() {
+                let _ = std::fs::remove_file(dir.join(".test"));
+                return dir;
+            }
+        }
+        let base = std::env::var("APPDATA").or_else(|_| std::env::var("HOME")).unwrap_or_else(|_| ".".into());
+        std::path::Path::new(&base).join("OuagaCity")
+    })
+    .clone()
+}
+
 fn save_path() -> std::path::PathBuf {
-    let base = std::env::var("APPDATA").or_else(|_| std::env::var("HOME")).unwrap_or_else(|_| ".".into());
-    std::path::Path::new(&base).join("OuagaCity").join("histoire.txt")
+    data_dir().join("histoire.txt")
 }
 
 pub fn saved_step() -> usize {

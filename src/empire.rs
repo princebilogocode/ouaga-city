@@ -112,8 +112,7 @@ impl Empire {
     }
 
     fn path() -> std::path::PathBuf {
-        let base = std::env::var("APPDATA").or_else(|_| std::env::var("HOME")).unwrap_or_else(|_| ".".into());
-        std::path::Path::new(&base).join("OuagaCity").join("empire.txt")
+        crate::story::data_dir().join("empire.txt")
     }
 
     pub fn save(&self, money: i64) {

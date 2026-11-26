@@ -1,6 +1,8 @@
 [package]
 name = "ouaga-city"
-version = "0.1.0"
+version = "1.0.0"
+description = "Ouaga City - jeu en monde ouvert 3D dans les vraies rues de Ouagadougou"
+license = "MIT"
 edition = "2021"
 
 [dependencies]
@@ -15,6 +17,10 @@ opt-level = 2
 
 [profile.release]
 opt-level = 3
+lto = "thin"
+codegen-units = 4
+strip = true
+panic = "abort"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 winit = "0.30"
