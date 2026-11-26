@@ -1,3 +1,7 @@
 /target
 /shots
 *.png
+/tools/venv
+/tools/TripoSR
+/tools/cache
+/tools/out

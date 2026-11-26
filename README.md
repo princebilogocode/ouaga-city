@@ -32,3 +32,11 @@ Rues, lacs, parcs et lieux : © contributeurs OpenStreetMap, sous licence ODbL
 (https://www.openstreetmap.org/copyright). Fichier converti : `assets/ouaga.map` (script `assets/conv.py`).
 
 Voir aussi `assets/CREDITS.md`.
+
+## Image → 3D sur cet ordinateur (gratuit)
+
+`python tools/image_vers_3d.py <image.png> <nom> [personnage|objet]` : TripoSR (open source, licence MIT)
+reconstruit le modèle sur le processeur (la Quadro M1000M n'a que 2 Go de mémoire vidéo), puis Blender le
+nettoie, le redresse, l'allège et, pour un personnage, ajoute squelette, doigts et animations.
+Installation : `tools/venv` (PyTorch CPU), `tools/TripoSR` (marching cubes remplacé par PyMCubes).
+Environ 2-3 min par objet, 4-5 min par personnage ; qualité inférieure au service en ligne (visages flous).
